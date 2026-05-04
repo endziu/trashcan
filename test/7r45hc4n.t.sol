@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity 0.8.28;
 
 import {Test, console} from "forge-std/Test.sol";
 import {TrashCan} from "../src/7r45hc4n.sol";

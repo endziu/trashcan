@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity 0.8.28;
 
 // 7r45hc4n (TrashCan): irreversible sink for ETH, ERC20, ERC721, and ERC1155 tokens.
 // WARNING: All tokens sent here are PERMANENTLY DESTROYED and cannot be recovered.
