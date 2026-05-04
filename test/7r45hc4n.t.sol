@@ -59,6 +59,24 @@ contract MockERC20NoReturn {
     }
 }
 
+// Calls back into TrashCan.burn() during transferFrom to test reentrancy robustness.
+contract MockERC20Reentrant {
+    TrashCan internal immutable target;
+    bool internal entered;
+
+    constructor(address _target) {
+        target = TrashCan(payable(_target));
+    }
+
+    function transferFrom(address, address, uint256) external returns (bool) {
+        if (!entered) {
+            entered = true;
+            target.burn{value: 0}();
+        }
+        return true;
+    }
+}
+
 contract MockERC721 {
     mapping(uint256 => address) public ownerOf;
 
@@ -283,6 +301,12 @@ contract TrashCanTest is Test {
         vm.expectRevert();
         trash.burnERC20(address(erc20), 100e18);
         vm.stopPrank();
+    }
+
+    function test_burnERC20_reentrantCallDoesNotCorruptState() public {
+        MockERC20Reentrant reentrant = new MockERC20Reentrant(address(trash));
+        // Reentrant token calls burn() during transferFrom — contract should complete cleanly
+        trash.burnERC20(address(reentrant), 1e18);
     }
 
     function test_burnERC20_revertsOnZeroAmount() public {
