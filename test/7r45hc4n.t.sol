@@ -285,6 +285,20 @@ contract TrashCanTest is Test {
         vm.stopPrank();
     }
 
+    function test_burnERC20_revertsOnZeroAmount() public {
+        vm.startPrank(alice);
+        erc20.approve(address(trash), 100e18);
+        vm.expectRevert("amount is zero");
+        trash.burnERC20(address(erc20), 0);
+        vm.stopPrank();
+    }
+
+    function test_burnERC20_revertsOnZeroAddress() public {
+        vm.prank(alice);
+        vm.expectRevert("zero address");
+        trash.burnERC20(address(0), 100e18);
+    }
+
     function testFuzz_burnERC20(uint256 amount) public {
         amount = bound(amount, 1, 1000e18);
         vm.startPrank(alice);
