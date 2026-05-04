@@ -7,7 +7,7 @@ Standard burn addresses (e.g. `0x000...dEaD`) are externally owned accounts with
 - They emit no events, so off-chain tracking of burn activity requires parsing raw token Transfer events to a well-known address.
 - They reject `safeTransferFrom` for ERC721 and ERC1155 tokens, because those require the recipient to implement a receiver hook and return the correct selector. Tokens sent this way revert.
 
-TrashCan is a contract that solves both: it emits a dedicated event for every burn and implements every standard receiver hook, while remaining fully ownerless and non-withdrawable.
+TrashCan is a contract that addresses both: it emits a dedicated event for burns performed through its explicit helpers (`burn()`, `burnERC20`, and the `safeTransferFrom` receiver hooks) and implements every standard receiver hook, while remaining fully ownerless and non-withdrawable. Burns that bypass these helpers — direct ERC20 `transfer()` calls or force-sent ETH — still destroy the assets but produce no TrashCan event.
 
 ## Security model
 
@@ -46,6 +46,10 @@ Standard ABI calls to ERC20's `transferFrom` fail for tokens like USDT that do n
 **`onERC1155BatchReceived` event does not contain token IDs or amounts.** The `ERC1155BatchDeposited` event records only the token contract address and the sender. The full batch contents (which token IDs, how many of each) must be recovered from the `TransferBatch` event emitted by the token contract in the same transaction.
 
 **`burn()` emits `ETHDeposited(sender, 0)` for zero-value calls.** This is intentional (see design decision above), but indexers that aggregate burn totals by summing `ETHDeposited.amount` will include zero-value events. Consumers that aggregate totals should be aware of this.
+
+**Force-sent ETH produces no event.** ETH sent via `SELFDESTRUCT` (or assigned as a coinbase reward) bypasses `receive` and `fallback` entirely. The contract balance will increase without a corresponding `ETHDeposited` log. Off-chain systems that use `ETHDeposited` events to account for destroyed ETH will undercount if any ETH arrives through this path.
+
+**Direct ERC20 `transfer()` produces no event.** Calling `token.transfer(trashcan, amount)` directly on the token contract destroys the tokens without invoking any TrashCan function, so no `ERC20Deposited` event is emitted. `burnERC20` is the only path that guarantees an event.
 
 ## Deployment
 

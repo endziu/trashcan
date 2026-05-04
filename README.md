@@ -11,7 +11,7 @@ A standard burn address (e.g. `0x0...dEaD`) is an EOA with no code. It accepts E
 - It will not emit events for what was burned, so off-chain indexers cannot reliably track burn activity.
 - It cannot accept ERC721 / ERC1155 transfers via `safeTransferFrom`, since those require the recipient to implement the receiver hook and return the correct selector.
 
-`7r45hc4n` is a contract that emits an event for every burn and implements every standard receiver hook, while still being fully ownerless and unrecoverable.
+`7r45hc4n` is a contract that emits an event for burns performed through its explicit helpers and implements every standard receiver hook, while still being fully ownerless and unrecoverable. Burns via direct `token.transfer()` or force-sent ETH still destroy assets but produce no TrashCan event.
 
 ## Interface
 
@@ -98,6 +98,8 @@ Before broadcasting, do a dry run (drop `--broadcast`) and check the `to` field 
 - **ERC777 tokens:** the contract is not registered with ERC-1820, so ERC777 transfers that enforce the recipient hook on the `transferFrom` path will revert.
 - **Receiver hook events are unauthenticated:** the ERC721 / ERC1155 hooks are public functions. Anyone can call them directly and cause `*Deposited` events to be emitted without an actual token transfer occurring. Off-chain consumers that care about real transfers should cross-reference the corresponding `Transfer` event on the token contract.
 - **`onERC1155BatchReceived` does not include token IDs or amounts** in its event, only the token contract and sender. Recover the contents from the corresponding ERC1155 `TransferBatch` event on the token contract.
+- **Direct `token.transfer()` produces no `ERC20Deposited` event.** Only `burnERC20` guarantees an event; a plain transfer to the contract address destroys tokens silently from TrashCan's perspective.
+- **Force-sent ETH produces no `ETHDeposited` event.** ETH delivered via `SELFDESTRUCT` bypasses `receive`/`fallback`. The contract balance can exceed the sum of all `ETHDeposited` amounts.
 
 ## License
 
