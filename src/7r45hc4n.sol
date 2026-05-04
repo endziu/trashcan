@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-// 7r45hc4n (TrashCan): irreversible sink for ETH, ERC20, ERC721, and ERC1155 tokens.
-// WARNING: All tokens sent here are PERMANENTLY DESTROYED and cannot be recovered.
+/// @title 7r45hc4n (TrashCan)
+/// @notice Permanent, ownerless token sink. ETH, ERC20, ERC721, and ERC1155
+///         tokens sent here are irreversibly destroyed.
+/// @dev No owner, no withdrawal function, no upgradability. Deployment is final.
+///      Implements ERC721TokenReceiver and ERC1155TokenReceiver so tokens can be
+///      sent via safeTransferFrom without reverting.
+///      WARNING: ALL TOKENS SENT HERE ARE PERMANENTLY DESTROYED AND CANNOT BE RECOVERED.
 
 interface IERC20 {
     function transferFrom(address from, address to, uint256 value) external returns (bool);
@@ -20,15 +25,24 @@ contract TrashCan {
     // ETH ACCEPTANCE
     // ============================================================================
 
+    /// @notice Accepts ETH transfers. Emits ETHDeposited if value is non-zero.
+    /// @dev Zero-value calls succeed silently. Use burn() to guarantee an event.
     receive() external payable {
         if (msg.value > 0) emit ETHDeposited(msg.sender, msg.value);
     }
 
+    /// @notice Accepts ETH sent alongside unrecognized calldata. Emits ETHDeposited
+    ///         if value is non-zero.
+    /// @dev Fires when msg.data is non-empty and no function selector matches.
+    ///      Zero-value calls succeed silently.
     fallback() external payable {
         if (msg.value > 0) emit ETHDeposited(msg.sender, msg.value);
     }
 
-    /// @dev Always emits, even for zero value — unlike receive/fallback.
+    /// @notice Permanently destroys ETH sent by the caller. Always emits
+    ///         ETHDeposited, even when msg.value is zero.
+    /// @dev Unlike receive/fallback, emits unconditionally. Use this when callers
+    ///      need an event receipt for a zero-value call.
     function burn() external payable {
         emit ETHDeposited(msg.sender, msg.value);
     }
@@ -37,6 +51,14 @@ contract TrashCan {
     // ERC20 SUPPORT
     // ============================================================================
 
+    /// @notice Permanently destroys ERC20 tokens by pulling them from the caller
+    ///         via transferFrom. The caller must approve this contract first.
+    /// @dev Emits the amount actually received (contract balance delta), not the
+    ///      amount requested. For fee-on-transfer tokens these may differ.
+    ///      Reverts if _token is not a deployed contract.
+    ///      ERC777 tokens that enforce ERC-1820 hooks on the transferFrom path may revert.
+    /// @param _token ERC20 token contract address.
+    /// @param _amount Number of tokens to pull (pre-fee for fee-on-transfer tokens).
     function burnERC20(address _token, uint256 _amount) external {
         require(_token != address(0), "zero address");
         require(_amount > 0, "amount is zero");
@@ -47,7 +69,8 @@ contract TrashCan {
         emit ERC20Deposited(_token, msg.sender, received);
     }
 
-    // Handles both bool-returning ERC20s and no-return-value tokens (e.g. USDT).
+    /// @dev Handles both bool-returning ERC20s and no-return-value tokens (e.g. USDT).
+    ///      Reverts with "ERC20 transfer failed" on any failure.
     function _safeTransferFrom(address token, address from, address to, uint256 amount) internal {
         (bool ok, bytes memory data) = token.call(
             abi.encodeWithSelector(IERC20.transferFrom.selector, from, to, amount)
@@ -59,6 +82,13 @@ contract TrashCan {
     // ERC721 SUPPORT
     // ============================================================================
 
+    /// @notice ERC721 safeTransferFrom receiver hook. Always accepts the token and
+    ///         emits ERC721Deposited.
+    /// @dev This function is public and unauthenticated. Any address can call it
+    ///      directly without a real token transfer, producing a spurious ERC721Deposited
+    ///      event. Off-chain consumers verifying burns should cross-reference the
+    ///      token contract's Transfer event.
+    /// @return bytes4 ERC721TokenReceiver magic value (0x150b7a02).
     function onERC721Received(
         address,
         address _from,
@@ -73,6 +103,10 @@ contract TrashCan {
     // ERC1155 SUPPORT
     // ============================================================================
 
+    /// @notice ERC1155 single-transfer receiver hook. Always accepts; emits
+    ///         ERC1155SingleDeposited.
+    /// @dev Unauthenticated — see onERC721Received for the forged-event caveat.
+    /// @return bytes4 ERC1155 single-transfer magic value (0xf23a6e61).
     function onERC1155Received(
         address,
         address _from,
@@ -84,6 +118,12 @@ contract TrashCan {
         return this.onERC1155Received.selector;
     }
 
+    /// @notice ERC1155 batch-transfer receiver hook. Always accepts; emits
+    ///         ERC1155BatchDeposited.
+    /// @dev Token IDs and amounts are intentionally omitted from the event to save gas.
+    ///      Recover the batch contents from the token contract's TransferBatch event.
+    ///      Unauthenticated — see onERC721Received for the forged-event caveat.
+    /// @return bytes4 ERC1155 batch-transfer magic value (0xbc197c81).
     function onERC1155BatchReceived(
         address,
         address _from,
@@ -99,6 +139,10 @@ contract TrashCan {
     // ERC165 INTERFACE DETECTION
     // ============================================================================
 
+    /// @notice Returns true for ERC165 (0x01ffc9a7), ERC721TokenReceiver (0x150b7a02),
+    ///         and ERC1155TokenReceiver (0x4e2312e0).
+    /// @param _interfaceId Interface selector to query.
+    /// @return bool True if the interface is supported.
     function supportsInterface(bytes4 _interfaceId) external pure returns (bool) {
         return (
             _interfaceId == 0x01ffc9a7 || // ERC165
@@ -111,10 +155,13 @@ contract TrashCan {
     // INFORMATIONAL VIEWS
     // ============================================================================
 
+    /// @notice Returns true. Identifies this contract to off-chain tools.
     function is7r45hc4n() external pure returns (bool) { return true; }
 
+    /// @notice Returns the contract name ("7r45hc4n").
     function name() external pure returns (string memory) { return "7r45hc4n"; }
 
+    /// @notice Returns a warning that all tokens sent here are permanently destroyed.
     function warning() external pure returns (string memory) {
         return "ALL TOKENS SENT HERE ARE PERMANENTLY DESTROYED";
     }
