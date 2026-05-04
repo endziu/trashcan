@@ -27,6 +27,7 @@ contract TrashCan {
         if (msg.value > 0) emit ETHDeposited(msg.sender, msg.value);
     }
 
+    /// @dev Always emits, even for zero value — unlike receive/fallback.
     function burn() external payable {
         emit ETHDeposited(msg.sender, msg.value);
     }
@@ -36,6 +37,8 @@ contract TrashCan {
     // ============================================================================
 
     function burnERC20(address _token, uint256 _amount) external {
+        require(_token != address(0), "zero address");
+        require(_amount > 0, "amount is zero");
         _safeTransferFrom(_token, msg.sender, address(this), _amount);
         emit ERC20Deposited(_token, msg.sender, _amount);
     }
