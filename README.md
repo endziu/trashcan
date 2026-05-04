@@ -64,7 +64,7 @@ forge test -v              # show gas per test
 forge test --match-test <name>
 ```
 
-Test suite includes unit tests, fuzz tests (10,000 runs), and an invariant test on the ETH balance.
+Test suite includes unit tests, fuzz tests, and an invariant test on the ETH balance.
 
 ## Deployment
 
@@ -81,7 +81,7 @@ A deployment script will live in `script/Deploy.s.sol`. Until that script exists
 
 ## Caveats
 
-- **Fee-on-transfer / rebasing ERC20s:** the amount actually destroyed may differ from the amount in the emitted event. Off-chain consumers should not assume `ERC20Deposited.amount` equals the contract balance delta.
+- **Fee-on-transfer ERC20s:** `burnERC20` emits the amount actually received (contract balance delta), not the amount requested. For standard tokens these are equal; for fee-on-transfer tokens the emitted amount will be less than what the caller approved.
 - **ERC777 tokens:** the contract is not registered with ERC-1820, so ERC777 transfers that enforce the recipient hook on the `transferFrom` path will revert.
 - **Receiver hook events are unauthenticated:** the ERC721 / ERC1155 hooks are public functions. Anyone can call them directly and cause `*Deposited` events to be emitted without an actual token transfer occurring. Off-chain consumers that care about real transfers should cross-reference the corresponding `Transfer` event on the token contract.
 - **`onERC1155BatchReceived` does not include token IDs or amounts** in its event, only the token contract and sender. Recover the contents from the corresponding ERC1155 `TransferBatch` event on the token contract.
