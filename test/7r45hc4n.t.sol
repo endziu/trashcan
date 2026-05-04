@@ -63,6 +63,32 @@ contract MockERC20NoReturn {
     }
 }
 
+// Deducts a 1% fee from the transferred amount, retaining it in the contract.
+contract MockERC20FeeOnTransfer {
+    mapping(address => uint256) public balanceOf;
+    mapping(address => mapping(address => uint256)) public allowance;
+    uint256 public constant FEE_BPS = 100; // 1%
+
+    function mint(address to, uint256 amount) external {
+        balanceOf[to] += amount;
+    }
+
+    function approve(address spender, uint256 amount) external returns (bool) {
+        allowance[msg.sender][spender] = amount;
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint256 amount) external returns (bool) {
+        require(allowance[from][msg.sender] >= amount, "allowance");
+        require(balanceOf[from] >= amount, "balance");
+        allowance[from][msg.sender] -= amount;
+        balanceOf[from] -= amount;
+        uint256 fee = amount * FEE_BPS / 10_000;
+        balanceOf[to] += amount - fee;
+        return true;
+    }
+}
+
 // Calls back into TrashCan.burn() during transferFrom to test reentrancy robustness.
 contract MockERC20Reentrant {
     TrashCan internal immutable TARGET;
@@ -297,8 +323,31 @@ contract TrashCanTest is Test {
 
     function test_burnERC20_revertsWithoutApproval() public {
         vm.prank(alice);
-        vm.expectRevert();
+        vm.expectRevert("ERC20 transfer failed");
         trash.burnERC20(address(erc20), 1e18);
+    }
+
+    function test_burnERC20_revertsForEOAToken() public {
+        vm.prank(alice);
+        vm.expectRevert("not a contract");
+        trash.burnERC20(bob, 100e18);
+    }
+
+    function test_burnERC20_feeOnTransfer_emitsReceivedAmount() public {
+        MockERC20FeeOnTransfer feeToken = new MockERC20FeeOnTransfer();
+        feeToken.mint(alice, 1000e18);
+
+        uint256 requested = 100e18;
+        uint256 expected = requested - (requested * 100 / 10_000); // 1% fee
+
+        vm.startPrank(alice);
+        feeToken.approve(address(trash), requested);
+        vm.expectEmit(true, true, true, false);
+        emit ERC20Deposited(address(feeToken), alice, expected);
+        trash.burnERC20(address(feeToken), requested);
+        vm.stopPrank();
+
+        assertEq(feeToken.balanceOf(address(trash)), expected);
     }
 
     function test_burnERC20_revertsInsufficientAllowance() public {
@@ -365,6 +414,15 @@ contract TrashCanTest is Test {
         erc721.safeTransferFrom(alice, address(trash), 2, "somedata");
     }
 
+    // The hook is public — anyone can call it directly without an actual token transfer.
+    // msg.sender (the direct caller) appears as the token address in the event.
+    function test_onERC721Received_directCall_forgesEvent() public {
+        vm.prank(bob);
+        vm.expectEmit(true, true, true, false);
+        emit ERC721Deposited(bob, alice, 99);
+        trash.onERC721Received(address(0), alice, 99, "");
+    }
+
     function testFuzz_onERC721Received(address operator, address from, uint256 tokenId, bytes memory data) public {
         bytes4 expected = bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"));
         vm.expectEmit(true, true, true, false);
@@ -383,6 +441,13 @@ contract TrashCanTest is Test {
         vm.prank(alice);
         erc1155.safeTransferFrom(alice, address(trash), 10, 100, "");
         assertEq(erc1155.balanceOf(address(trash), 10), 100);
+    }
+
+    function test_onERC1155Received_directCall_forgesEvent() public {
+        vm.prank(bob);
+        vm.expectEmit(true, true, true, true);
+        emit ERC1155SingleDeposited(bob, alice, 7, 300);
+        trash.onERC1155Received(address(0), alice, 7, 300, "");
     }
 
     function test_onERC1155Received_returnsMagicValue() public {
@@ -509,10 +574,12 @@ contract TrashCanTest is Test {
 
 contract TrashCanHandler is Test {
     TrashCan internal immutable TRASH;
+    MockERC20 internal immutable ERC20_TOKEN;
     uint256 public ghostDepositedEth;
 
     constructor(TrashCan _trash) {
         TRASH = _trash;
+        ERC20_TOKEN = new MockERC20();
     }
 
     function burn(uint96 amount) external {
@@ -526,6 +593,13 @@ contract TrashCanHandler is Test {
         ghostDepositedEth += amount;
         (bool ok,) = address(TRASH).call{value: amount}("");
         require(ok);
+    }
+
+    function burnERC20(uint96 amount) external {
+        if (amount == 0) return;
+        ERC20_TOKEN.mint(address(this), amount);
+        ERC20_TOKEN.approve(address(TRASH), amount);
+        TRASH.burnERC20(address(ERC20_TOKEN), amount);
     }
 }
 
