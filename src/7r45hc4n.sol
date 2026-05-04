@@ -9,10 +9,10 @@ interface IERC20 {
 }
 
 contract TrashCan {
-    event ETHDeposited(address indexed sender, uint256 amount);
-    event ERC20Deposited(address indexed token, address indexed sender, uint256 amount);
-    event ERC721Deposited(address indexed token, address indexed sender, uint256 tokenId);
-    event ERC1155SingleDeposited(address indexed token, address indexed sender, uint256 tokenId, uint256 amount);
+    event ETHDeposited(address indexed sender, uint256 indexed amount);
+    event ERC20Deposited(address indexed token, address indexed sender, uint256 indexed amount);
+    event ERC721Deposited(address indexed token, address indexed sender, uint256 indexed tokenId);
+    event ERC1155SingleDeposited(address indexed token, address indexed sender, uint256 indexed tokenId, uint256 amount);
     event ERC1155BatchDeposited(address indexed token, address indexed sender);
 
     // ============================================================================

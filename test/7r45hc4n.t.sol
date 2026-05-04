@@ -103,10 +103,10 @@ contract TrashCanTest is Test {
     address internal alice = makeAddr("alice");
     address internal bob = makeAddr("bob");
 
-    event ETHDeposited(address indexed sender, uint256 amount);
-    event ERC20Deposited(address indexed token, address indexed sender, uint256 amount);
-    event ERC721Deposited(address indexed token, address indexed sender, uint256 tokenId);
-    event ERC1155SingleDeposited(address indexed token, address indexed sender, uint256 tokenId, uint256 amount);
+    event ETHDeposited(address indexed sender, uint256 indexed amount);
+    event ERC20Deposited(address indexed token, address indexed sender, uint256 indexed amount);
+    event ERC721Deposited(address indexed token, address indexed sender, uint256 indexed tokenId);
+    event ERC1155SingleDeposited(address indexed token, address indexed sender, uint256 indexed tokenId, uint256 amount);
     event ERC1155BatchDeposited(address indexed token, address indexed sender);
 
     function setUp() public {
@@ -130,7 +130,7 @@ contract TrashCanTest is Test {
     // ============================================================================
 
     function test_receive_emitsEvent() public {
-        vm.expectEmit(true, false, false, true);
+        vm.expectEmit(true, true, false, false);
         emit ETHDeposited(alice, 1 ether);
         vm.prank(alice);
         (bool ok,) = address(trash).call{value: 1 ether}("");
@@ -155,7 +155,7 @@ contract TrashCanTest is Test {
     function testFuzz_receive(uint96 amount) public {
         vm.assume(amount > 0);
         vm.deal(alice, amount);
-        vm.expectEmit(true, false, false, true);
+        vm.expectEmit(true, true, false, false);
         emit ETHDeposited(alice, amount);
         vm.prank(alice);
         (bool ok,) = address(trash).call{value: amount}("");
@@ -168,7 +168,7 @@ contract TrashCanTest is Test {
     // ============================================================================
 
     function test_fallback_withValue_emitsEvent() public {
-        vm.expectEmit(true, false, false, true);
+        vm.expectEmit(true, true, false, false);
         emit ETHDeposited(alice, 1 ether);
         vm.prank(alice);
         (bool ok,) = address(trash).call{value: 1 ether}(hex"deadbeef");
@@ -188,7 +188,7 @@ contract TrashCanTest is Test {
     // ============================================================================
 
     function test_burn_withValue_emitsEvent() public {
-        vm.expectEmit(true, false, false, true);
+        vm.expectEmit(true, true, false, false);
         emit ETHDeposited(alice, 2 ether);
         vm.prank(alice);
         trash.burn{value: 2 ether}();
@@ -197,7 +197,7 @@ contract TrashCanTest is Test {
 
     function test_burn_zeroValue_stillEmits() public {
         // burn() emits unconditionally, unlike receive/fallback
-        vm.expectEmit(true, false, false, true);
+        vm.expectEmit(true, true, false, false);
         emit ETHDeposited(alice, 0);
         vm.prank(alice);
         trash.burn{value: 0}();
@@ -205,7 +205,7 @@ contract TrashCanTest is Test {
 
     function testFuzz_burn(uint96 amount) public {
         vm.deal(alice, amount);
-        vm.expectEmit(true, false, false, true);
+        vm.expectEmit(true, true, false, false);
         emit ETHDeposited(alice, amount);
         vm.prank(alice);
         trash.burn{value: amount}();
@@ -219,7 +219,7 @@ contract TrashCanTest is Test {
     function test_burnERC20_emitsEvent() public {
         vm.startPrank(alice);
         erc20.approve(address(trash), 100e18);
-        vm.expectEmit(true, true, false, true);
+        vm.expectEmit(true, true, true, false);
         emit ERC20Deposited(address(erc20), alice, 100e18);
         trash.burnERC20(address(erc20), 100e18);
         vm.stopPrank();
@@ -252,7 +252,7 @@ contract TrashCanTest is Test {
         amount = bound(amount, 1, 1000e18);
         vm.startPrank(alice);
         erc20.approve(address(trash), amount);
-        vm.expectEmit(true, true, false, true);
+        vm.expectEmit(true, true, true, false);
         emit ERC20Deposited(address(erc20), alice, amount);
         trash.burnERC20(address(erc20), amount);
         vm.stopPrank();
@@ -264,7 +264,7 @@ contract TrashCanTest is Test {
     // ============================================================================
 
     function test_onERC721Received_viaTransfer_emitsEvent() public {
-        vm.expectEmit(true, true, false, true);
+        vm.expectEmit(true, true, true, false);
         emit ERC721Deposited(address(erc721), alice, 1);
         vm.prank(alice);
         erc721.safeTransferFrom(alice, address(trash), 1);
@@ -278,7 +278,7 @@ contract TrashCanTest is Test {
     }
 
     function test_onERC721Received_withData() public {
-        vm.expectEmit(true, true, false, true);
+        vm.expectEmit(true, true, true, false);
         emit ERC721Deposited(address(erc721), alice, 2);
         vm.prank(alice);
         erc721.safeTransferFrom(alice, address(trash), 2, "somedata");
@@ -286,7 +286,7 @@ contract TrashCanTest is Test {
 
     function testFuzz_onERC721Received(address operator, address from, uint256 tokenId, bytes memory data) public {
         bytes4 expected = bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"));
-        vm.expectEmit(true, true, false, true);
+        vm.expectEmit(true, true, true, false);
         emit ERC721Deposited(address(this), from, tokenId);
         bytes4 ret = trash.onERC721Received(operator, from, tokenId, data);
         assertEq(ret, expected);
@@ -297,7 +297,7 @@ contract TrashCanTest is Test {
     // ============================================================================
 
     function test_onERC1155Received_viaTransfer_emitsEvent() public {
-        vm.expectEmit(true, true, false, true);
+        vm.expectEmit(true, true, true, true);
         emit ERC1155SingleDeposited(address(erc1155), alice, 10, 100);
         vm.prank(alice);
         erc1155.safeTransferFrom(alice, address(trash), 10, 100, "");
@@ -318,7 +318,7 @@ contract TrashCanTest is Test {
         bytes memory data
     ) public {
         bytes4 expected = bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)"));
-        vm.expectEmit(true, true, false, true);
+        vm.expectEmit(true, true, true, true);
         emit ERC1155SingleDeposited(address(this), from, id, value);
         bytes4 ret = trash.onERC1155Received(operator, from, id, value, data);
         assertEq(ret, expected);
