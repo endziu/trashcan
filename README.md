@@ -70,7 +70,20 @@ Test suite includes unit tests, fuzz tests, and an invariant test on the ETH bal
 
 The contract has no constructor and no initialization. Deploy bytecode and it is ready.
 
-A deployment script will live in `script/Deploy.s.sol`. Until that script exists this README intentionally does not document a deploy command — see `forge script --help` for the general pattern.
+Deploy with `script/Deploy.s.sol`:
+
+```bash
+forge script script/Deploy.s.sol:Deploy \
+  --rpc-url $RPC_URL \
+  --private-key $PRIVATE_KEY \
+  --broadcast \
+  --verify \
+  --etherscan-api-key $ETHERSCAN_API_KEY
+```
+
+`--verify` submits the source to Etherscan automatically. Omit it for chains where verification is handled separately.
+
+Before broadcasting, do a dry run (drop `--broadcast`) and check the `to` field is `null` (contract creation) and the bytecode matches `forge inspect TrashCan bytecode`.
 
 | | Value |
 |---|---|
