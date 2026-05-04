@@ -496,3 +496,44 @@ contract TrashCanTest is Test {
         // No function can release ETH — verified by the absence of any such selector
     }
 }
+
+// ============================================================================
+// INVARIANT TESTS
+// ============================================================================
+
+contract TrashCanHandler is Test {
+    TrashCan internal immutable trash;
+    uint256 public ghost_depositedETH;
+
+    constructor(TrashCan _trash) {
+        trash = _trash;
+    }
+
+    function burn(uint96 amount) external {
+        vm.deal(address(this), amount);
+        ghost_depositedETH += amount;
+        trash.burn{value: amount}();
+    }
+
+    function sendETH(uint96 amount) external {
+        vm.deal(address(this), amount);
+        ghost_depositedETH += amount;
+        (bool ok,) = address(trash).call{value: amount}("");
+        require(ok);
+    }
+}
+
+contract TrashCanInvariantTest is Test {
+    TrashCan internal trash;
+    TrashCanHandler internal handler;
+
+    function setUp() public {
+        trash = new TrashCan();
+        handler = new TrashCanHandler(trash);
+        targetContract(address(handler));
+    }
+
+    function invariant_balanceEqualsDeposited() public view {
+        assertEq(address(trash).balance, handler.ghost_depositedETH());
+    }
+}
