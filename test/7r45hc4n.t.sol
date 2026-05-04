@@ -35,6 +35,10 @@ contract MockERC20Reverting {
     function transferFrom(address, address, uint256) external pure returns (bool) {
         return false;
     }
+
+    function balanceOf(address) external pure returns (uint256) {
+        return 0;
+    }
 }
 
 // USDT-style: transferFrom succeeds but returns nothing (no bool).
@@ -63,16 +67,18 @@ contract MockERC20NoReturn {
 contract MockERC20Reentrant {
     TrashCan internal immutable TARGET;
     bool internal entered;
+    mapping(address => uint256) public balanceOf;
 
     constructor(address _target) {
         TARGET = TrashCan(payable(_target));
     }
 
-    function transferFrom(address, address, uint256) external returns (bool) {
+    function transferFrom(address, address to, uint256 amount) external returns (bool) {
         if (!entered) {
             entered = true;
             TARGET.burn{value: 0}();
         }
+        balanceOf[to] += amount;
         return true;
     }
 }

@@ -6,6 +6,7 @@ pragma solidity 0.8.28;
 
 interface IERC20 {
     function transferFrom(address from, address to, uint256 value) external returns (bool);
+    function balanceOf(address account) external view returns (uint256);
 }
 
 contract TrashCan {
@@ -39,8 +40,11 @@ contract TrashCan {
     function burnERC20(address _token, uint256 _amount) external {
         require(_token != address(0), "zero address");
         require(_amount > 0, "amount is zero");
+        require(_token.code.length > 0, "not a contract");
+        uint256 balanceBefore = IERC20(_token).balanceOf(address(this));
         _safeTransferFrom(_token, msg.sender, address(this), _amount);
-        emit ERC20Deposited(_token, msg.sender, _amount);
+        uint256 received = IERC20(_token).balanceOf(address(this)) - balanceBefore;
+        emit ERC20Deposited(_token, msg.sender, received);
     }
 
     // Handles both bool-returning ERC20s and no-return-value tokens (e.g. USDT).
