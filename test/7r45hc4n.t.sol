@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {Test, console} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {TrashCan} from "../src/7r45hc4n.sol";
 
 // ============================================================================
@@ -61,17 +61,17 @@ contract MockERC20NoReturn {
 
 // Calls back into TrashCan.burn() during transferFrom to test reentrancy robustness.
 contract MockERC20Reentrant {
-    TrashCan internal immutable target;
+    TrashCan internal immutable TARGET;
     bool internal entered;
 
     constructor(address _target) {
-        target = TrashCan(payable(_target));
+        TARGET = TrashCan(payable(_target));
     }
 
     function transferFrom(address, address, uint256) external returns (bool) {
         if (!entered) {
             entered = true;
-            target.burn{value: 0}();
+            TARGET.burn{value: 0}();
         }
         return true;
     }
@@ -502,23 +502,23 @@ contract TrashCanTest is Test {
 // ============================================================================
 
 contract TrashCanHandler is Test {
-    TrashCan internal immutable trash;
-    uint256 public ghost_depositedETH;
+    TrashCan internal immutable TRASH;
+    uint256 public ghostDepositedEth;
 
     constructor(TrashCan _trash) {
-        trash = _trash;
+        TRASH = _trash;
     }
 
     function burn(uint96 amount) external {
         vm.deal(address(this), amount);
-        ghost_depositedETH += amount;
-        trash.burn{value: amount}();
+        ghostDepositedEth += amount;
+        TRASH.burn{value: amount}();
     }
 
-    function sendETH(uint96 amount) external {
+    function sendEth(uint96 amount) external {
         vm.deal(address(this), amount);
-        ghost_depositedETH += amount;
-        (bool ok,) = address(trash).call{value: amount}("");
+        ghostDepositedEth += amount;
+        (bool ok,) = address(TRASH).call{value: amount}("");
         require(ok);
     }
 }
@@ -534,6 +534,6 @@ contract TrashCanInvariantTest is Test {
     }
 
     function invariant_balanceEqualsDeposited() public view {
-        assertEq(address(trash).balance, handler.ghost_depositedETH());
+        assertEq(address(trash).balance, handler.ghostDepositedEth());
     }
 }
