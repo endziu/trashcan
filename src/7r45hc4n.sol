@@ -36,9 +36,16 @@ contract TrashCan {
     // ============================================================================
 
     function burnERC20(address _token, uint256 _amount) external {
-        bool success = IERC20(_token).transferFrom(msg.sender, address(this), _amount);
-        require(success, "ERC20 transfer failed");
+        _safeTransferFrom(_token, msg.sender, address(this), _amount);
         emit ERC20Deposited(_token, msg.sender, _amount);
+    }
+
+    // Handles both bool-returning ERC20s and no-return-value tokens (e.g. USDT).
+    function _safeTransferFrom(address token, address from, address to, uint256 amount) internal {
+        (bool ok, bytes memory data) = token.call(
+            abi.encodeWithSelector(IERC20.transferFrom.selector, from, to, amount)
+        );
+        require(ok && (data.length == 0 || abi.decode(data, (bool))), "ERC20 transfer failed");
     }
 
     // ============================================================================
