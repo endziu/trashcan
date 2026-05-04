@@ -37,6 +37,28 @@ contract MockERC20Reverting {
     }
 }
 
+// USDT-style: transferFrom succeeds but returns nothing (no bool).
+contract MockERC20NoReturn {
+    mapping(address => uint256) public balanceOf;
+    mapping(address => mapping(address => uint256)) public allowance;
+
+    function mint(address to, uint256 amount) external {
+        balanceOf[to] += amount;
+    }
+
+    function approve(address spender, uint256 amount) external {
+        allowance[msg.sender][spender] = amount;
+    }
+
+    function transferFrom(address from, address to, uint256 amount) external {
+        require(allowance[from][msg.sender] >= amount, "allowance");
+        require(balanceOf[from] >= amount, "balance");
+        allowance[from][msg.sender] -= amount;
+        balanceOf[from] -= amount;
+        balanceOf[to] += amount;
+    }
+}
+
 contract MockERC721 {
     mapping(uint256 => address) public ownerOf;
 
@@ -97,6 +119,7 @@ contract TrashCanTest is Test {
     TrashCan internal trash;
     MockERC20 internal erc20;
     MockERC20Reverting internal erc20Rev;
+    MockERC20NoReturn internal erc20NoReturn;
     MockERC721 internal erc721;
     MockERC1155 internal erc1155;
 
@@ -113,12 +136,14 @@ contract TrashCanTest is Test {
         trash = new TrashCan();
         erc20 = new MockERC20();
         erc20Rev = new MockERC20Reverting();
+        erc20NoReturn = new MockERC20NoReturn();
         erc721 = new MockERC721();
         erc1155 = new MockERC1155();
 
         vm.deal(alice, 100 ether);
         vm.deal(bob, 100 ether);
         erc20.mint(alice, 1000e18);
+        erc20NoReturn.mint(alice, 1000e18);
         erc721.mint(alice, 1);
         erc721.mint(alice, 2);
         erc1155.mint(alice, 10, 500);
@@ -226,6 +251,18 @@ contract TrashCanTest is Test {
 
         assertEq(erc20.balanceOf(alice), 900e18);
         assertEq(erc20.balanceOf(address(trash)), 100e18);
+    }
+
+    function test_burnERC20_noReturnValue() public {
+        vm.startPrank(alice);
+        erc20NoReturn.approve(address(trash), 100e18);
+        vm.expectEmit(true, true, true, false);
+        emit ERC20Deposited(address(erc20NoReturn), alice, 100e18);
+        trash.burnERC20(address(erc20NoReturn), 100e18);
+        vm.stopPrank();
+
+        assertEq(erc20NoReturn.balanceOf(alice), 900e18);
+        assertEq(erc20NoReturn.balanceOf(address(trash)), 100e18);
     }
 
     function test_burnERC20_revertsOnTransferFailure() public {
