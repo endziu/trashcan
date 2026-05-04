@@ -1,0 +1,36 @@
+# Foundry
+out/
+cache/
+broadcast/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+lib/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Artifacts
+*.json
+!foundry.toml
+!package.json
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Analysis reports
+review.md
+report.md
