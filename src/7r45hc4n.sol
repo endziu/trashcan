@@ -55,7 +55,7 @@ contract TrashCan {
     ///         via transferFrom. The caller must approve this contract first.
     /// @dev Emits the amount actually received (contract balance delta), not the
     ///      amount requested. For fee-on-transfer tokens these may differ.
-    ///      Reverts if _token is not a deployed contract.
+    ///      Reverts if _token is not a deployed contract or if nothing is received (e.g. 100%-fee token).
     ///      ERC777 tokens that enforce ERC-1820 hooks on the transferFrom path may revert.
     /// @param _token ERC20 token contract address.
     /// @param _amount Number of tokens to pull (pre-fee for fee-on-transfer tokens).
@@ -66,6 +66,7 @@ contract TrashCan {
         uint256 balanceBefore = IERC20(_token).balanceOf(address(this));
         _safeTransferFrom(_token, msg.sender, address(this), _amount);
         uint256 received = IERC20(_token).balanceOf(address(this)) - balanceBefore;
+        require(received > 0, "nothing received");
         emit ERC20Deposited(_token, msg.sender, received);
     }
 
