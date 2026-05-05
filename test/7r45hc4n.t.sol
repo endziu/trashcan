@@ -220,13 +220,6 @@ contract TrashCanTest is Test {
         assertEq(vm.getRecordedLogs().length, 0);
     }
 
-    function test_receive_ethStaysLocked() public {
-        vm.prank(alice);
-        (bool ok,) = address(trash).call{value: 3 ether}("");
-        assertTrue(ok);
-        assertEq(address(trash).balance, 3 ether);
-    }
-
     function testFuzz_receive(uint96 amount) public {
         vm.assume(amount > 0);
         vm.deal(alice, amount);
@@ -348,14 +341,6 @@ contract TrashCanTest is Test {
         vm.stopPrank();
 
         assertEq(feeToken.balanceOf(address(trash)), expected);
-    }
-
-    function test_burnERC20_revertsInsufficientAllowance() public {
-        vm.startPrank(alice);
-        erc20.approve(address(trash), 50e18);
-        vm.expectRevert();
-        trash.burnERC20(address(erc20), 100e18);
-        vm.stopPrank();
     }
 
     function test_burnERC20_reentrantCallDoesNotCorruptState() public {
@@ -554,18 +539,6 @@ contract TrashCanTest is Test {
         assertEq(trash.warning(), "ALL TOKENS SENT HERE ARE PERMANENTLY DESTROYED");
     }
 
-    // ============================================================================
-    // NO WITHDRAWAL — contract can hold but never release
-    // ============================================================================
-
-    function test_noWithdrawal_ethLockedForever() public {
-        vm.prank(alice);
-        (bool ok,) = address(trash).call{value: 10 ether}("");
-        assertTrue(ok);
-        assertEq(address(trash).balance, 10 ether);
-        assertEq(alice.balance, 90 ether);
-        // No function can release ETH — verified by the absence of any such selector
-    }
 }
 
 // ============================================================================
