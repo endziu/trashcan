@@ -89,6 +89,29 @@ contract MockERC20FeeOnTransfer {
     }
 }
 
+// 100%-fee token: transferFrom deducts from sender but credits nothing to recipient.
+contract MockERC20FullFee {
+    mapping(address => uint256) public balanceOf;
+    mapping(address => mapping(address => uint256)) public allowance;
+
+    function mint(address to, uint256 amount) external {
+        balanceOf[to] += amount;
+    }
+
+    function approve(address spender, uint256 amount) external returns (bool) {
+        allowance[msg.sender][spender] = amount;
+        return true;
+    }
+
+    function transferFrom(address from, address, uint256 amount) external returns (bool) {
+        require(allowance[from][msg.sender] >= amount, "allowance");
+        require(balanceOf[from] >= amount, "balance");
+        allowance[from][msg.sender] -= amount;
+        balanceOf[from] -= amount;
+        return true;
+    }
+}
+
 // Calls back into TrashCan.burn() during transferFrom to test reentrancy robustness.
 contract MockERC20Reentrant {
     TrashCan internal immutable TARGET;
@@ -341,6 +364,16 @@ contract TrashCanTest is Test {
         vm.stopPrank();
 
         assertEq(feeToken.balanceOf(address(trash)), expected);
+    }
+
+    function test_burnERC20_revertsOnFullFeeToken() public {
+        MockERC20FullFee fullFeeToken = new MockERC20FullFee();
+        fullFeeToken.mint(alice, 100e18);
+        vm.startPrank(alice);
+        fullFeeToken.approve(address(trash), 100e18);
+        vm.expectRevert("nothing received");
+        trash.burnERC20(address(fullFeeToken), 100e18);
+        vm.stopPrank();
     }
 
     function test_burnERC20_reentrantCallDoesNotCorruptState() public {
