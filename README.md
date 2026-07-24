@@ -87,9 +87,10 @@ Before broadcasting, do a dry run (drop `--broadcast`) and check the `to` field 
 
 | | Value |
 |---|---|
-| Runtime bytecode | ~2,099 bytes |
-| Est. deploy gas | ~66,000 |
-| Compiler | Solidity 0.8.28 |
+| Runtime bytecode | 3,532 bytes |
+| Est. deploy gas | ~810,000 |
+| Compiler | Solidity 0.8.36 (pinned in `foundry.toml`) |
+| EVM version | cancun (pinned in `foundry.toml`) |
 | Optimizer runs | 1,000,000 |
 
 ## Caveats
