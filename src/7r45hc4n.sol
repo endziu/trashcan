@@ -21,6 +21,19 @@ contract TrashCan {
     event ERC1155SingleDeposited(address indexed token, address indexed sender, uint256 indexed tokenId, uint256 amount);
     event ERC1155BatchDeposited(address indexed token, address indexed sender);
 
+    /// @dev Reentrancy flag for burnERC20. Transient storage: cleared at end of tx,
+    ///      ~100 gas per set vs ~5,000 for a cold storage slot.
+    bool transient _entered;
+
+    /// @dev Blocks reentry into burnERC20 via a token transfer hook, which would
+    ///      otherwise double-count the balance delta and over-report the burn.
+    modifier nonReentrant() {
+        require(!_entered, "reentrant");
+        _entered = true;
+        _;
+        _entered = false;
+    }
+
     // ============================================================================
     // ETH ACCEPTANCE
     // ============================================================================
@@ -57,9 +70,12 @@ contract TrashCan {
     ///      amount requested. For fee-on-transfer tokens these may differ.
     ///      Reverts if _token is not a deployed contract or if nothing is received (e.g. 100%-fee token).
     ///      ERC777 tokens that enforce ERC-1820 hooks on the transferFrom path may revert.
+    ///      Non-reentrant: a token whose transfer hook calls back into burnERC20 reverts
+    ///      rather than emitting an inflated amount. Reentry into burn() (ETH) is
+    ///      unaffected and remains harmless.
     /// @param _token ERC20 token contract address.
     /// @param _amount Number of tokens to pull (pre-fee for fee-on-transfer tokens).
-    function burnERC20(address _token, uint256 _amount) external {
+    function burnERC20(address _token, uint256 _amount) external nonReentrant {
         require(_token != address(0), "zero address");
         require(_amount > 0, "amount is zero");
         require(_token.code.length > 0, "not a contract");

@@ -87,8 +87,8 @@ Before broadcasting, do a dry run (drop `--broadcast`) and check the `to` field 
 
 | | Value |
 |---|---|
-| Runtime bytecode | 3,532 bytes |
-| Est. deploy gas | ~810,000 |
+| Runtime bytecode | 3,725 bytes |
+| Est. deploy gas | ~851,000 |
 | Compiler | Solidity 0.8.36 (pinned in `foundry.toml`) |
 | EVM version | cancun (pinned in `foundry.toml`) |
 | Optimizer runs | 1,000,000 |
@@ -97,6 +97,7 @@ Before broadcasting, do a dry run (drop `--broadcast`) and check the `to` field 
 
 - **Fee-on-transfer ERC20s:** `burnERC20` emits the amount actually received (contract balance delta), not the amount requested. For standard tokens these are equal; for fee-on-transfer tokens the emitted amount will be less than what the caller approved.
 - **ERC777 tokens:** the contract is not registered with ERC-1820, so ERC777 transfers that enforce the recipient hook on the `transferFrom` path will revert.
+- **Reentrant tokens:** `burnERC20` is guarded. A token whose transfer hook calls back into `burnERC20` reverts rather than emitting an inflated amount — the balance-delta accounting would otherwise count the inner burn twice. Reentry into `burn()` (ETH) is unaffected.
 - **Receiver hook events are unauthenticated:** the ERC721 / ERC1155 hooks are public functions. Anyone can call them directly and cause `*Deposited` events to be emitted without an actual token transfer occurring. Off-chain consumers that care about real transfers should cross-reference the corresponding `Transfer` event on the token contract.
 - **`onERC1155BatchReceived` does not include token IDs or amounts** in its event, only the token contract and sender. Recover the contents from the corresponding ERC1155 `TransferBatch` event on the token contract.
 - **Direct `token.transfer()` produces no `ERC20Deposited` event.** Only `burnERC20` guarantees an event; a plain transfer to the contract address destroys tokens silently from TrashCan's perspective.

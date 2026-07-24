@@ -132,6 +132,27 @@ contract MockERC20Reentrant {
     }
 }
 
+// Calls back into TrashCan.burnERC20() during transferFrom — the balance-delta
+// double-count vector the nonReentrant guard exists to block.
+contract MockERC20ReentrantBurn {
+    TrashCan internal immutable TARGET;
+    bool internal entered;
+    mapping(address => uint256) public balanceOf;
+
+    constructor(address _target) {
+        TARGET = TrashCan(payable(_target));
+    }
+
+    function transferFrom(address, address to, uint256 amount) external returns (bool) {
+        balanceOf[to] += amount;
+        if (!entered) {
+            entered = true;
+            TARGET.burnERC20(address(this), amount);
+        }
+        return true;
+    }
+}
+
 contract MockERC721 {
     mapping(uint256 => address) public ownerOf;
 
@@ -380,6 +401,22 @@ contract TrashCanTest is Test {
         MockERC20Reentrant reentrant = new MockERC20Reentrant(address(trash));
         // Reentrant token calls burn() during transferFrom — contract should complete cleanly
         trash.burnERC20(address(reentrant), 1e18);
+    }
+
+    function test_burnERC20_revertsOnReentrantBurnERC20() public {
+        MockERC20ReentrantBurn reentrant = new MockERC20ReentrantBurn(address(trash));
+        // Without the guard the outer call would emit amount*2 for one transfer.
+        vm.expectRevert("ERC20 transfer failed"); // inner "reentrant" bubbles through _safeTransferFrom
+        trash.burnERC20(address(reentrant), 1e18);
+    }
+
+    function test_burnERC20_guardClearsBetweenCalls() public {
+        vm.startPrank(alice);
+        erc20.approve(address(trash), 100e18);
+        trash.burnERC20(address(erc20), 10e18);
+        trash.burnERC20(address(erc20), 10e18);
+        vm.stopPrank();
+        assertEq(erc20.balanceOf(address(trash)), 20e18);
     }
 
     function test_burnERC20_revertsOnZeroAmount() public {
