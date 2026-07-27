@@ -83,7 +83,7 @@ forge script script/Deploy.s.sol:Deploy \
 
 `--verify` submits the source to Etherscan automatically. Omit it for chains where verification is handled separately.
 
-Before broadcasting, do a dry run (drop `--broadcast`) and check the `to` field is `null` (contract creation) and the bytecode matches `forge inspect TrashCan bytecode`.
+The script deploys through the canonical CREATE2 factory (`0x4e59b44847b379578588920cA78FbF26c0B4956C`, already live on 100+ chains) with a fixed salt, so TrashCan lands at the **same address on every chain the factory exists on** — no per-chain nonce bookkeeping, and no address to publish ahead of deployment. The dry run's `to` field will be the factory address (a `call`, not a contract-creation tx); verify instead that the returned address matches the one below and that `forge inspect TrashCan bytecode` matches the script's `Initcode hash` log line.
 
 | | Value |
 |---|---|
@@ -92,6 +92,12 @@ Before broadcasting, do a dry run (drop `--broadcast`) and check the `to` field 
 | Compiler | Solidity 0.8.36 (pinned in `foundry.toml`) |
 | EVM version | paris (pinned in `foundry.toml`) |
 | Optimizer runs | 1,000,000 |
+| CREATE2 factory | `0x4e59b44847b379578588920cA78FbF26c0B4956C` |
+| Salt | `0x00…00` (`bytes32(uint256(0))`) |
+| Initcode hash | `0x009f864742bc6b903a2c1e9cbbb8d643f1c551fc5ccae68a3336021c1577e700` |
+| Deployed address | `0xC669D215e704a33420f295FFd240aa1E9Cc82d69` |
+
+The address depends on `solc_version`, `evm_version`, and `optimizer_runs` in `foundry.toml` in addition to the salt — treat any change to those three as a new version with a new address.
 
 ## Caveats
 
