@@ -76,6 +76,8 @@ contract TrashCan {
     ///      The received amount is clamped to _amount: a token hook or rebase that
     ///      inflates the balance delta during the transferFrom window cannot inflate
     ///      the emitted receipt beyond what the caller actually authorized.
+    ///      Negative-rebase/deflationary tokens that shrink the contract's existing
+    ///      balance during the call saturate to zero instead of underflow-panicking.
     /// @param _token ERC20 token contract address.
     /// @param _amount Number of tokens to pull (pre-fee for fee-on-transfer tokens).
     function burnERC20(address _token, uint256 _amount) external nonReentrant {
@@ -84,7 +86,8 @@ contract TrashCan {
         require(_token.code.length > 0, "not a contract");
         uint256 balanceBefore = IERC20(_token).balanceOf(address(this));
         _safeTransferFrom(_token, msg.sender, address(this), _amount);
-        uint256 received = IERC20(_token).balanceOf(address(this)) - balanceBefore;
+        uint256 balanceAfter = IERC20(_token).balanceOf(address(this));
+        uint256 received = balanceAfter > balanceBefore ? balanceAfter - balanceBefore : 0;
         if (received > _amount) received = _amount;
         require(received > 0, "nothing received");
         emit ERC20Deposited(_token, msg.sender, received);
