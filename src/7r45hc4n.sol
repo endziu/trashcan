@@ -8,6 +8,11 @@ pragma solidity 0.8.36;
 ///      Implements ERC721TokenReceiver and ERC1155TokenReceiver so tokens can be
 ///      sent via safeTransferFrom without reverting.
 ///      WARNING: ALL TOKENS SENT HERE ARE PERMANENTLY DESTROYED AND CANNOT BE RECOVERED.
+///      Event receipts exist only for burn()/receive/fallback (ETH), burnERC20
+///      (ERC20), and the safeTransferFrom / safeBatchTransferFrom paths for
+///      ERC721/ERC1155. Plain ERC20 transfer(), CryptoPunks-style transfers, and
+///      ERC-223 tokenReceived all destroy the asset via this contract's fallback
+///      with no corresponding event.
 
 interface IERC20 {
     function transferFrom(address from, address to, uint256 value) external returns (bool);

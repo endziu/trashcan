@@ -51,6 +51,8 @@ Standard ABI calls to ERC20's `transferFrom` fail for tokens like USDT that do n
 
 **Direct ERC20 `transfer()` produces no event.** Calling `token.transfer(trashcan, amount)` directly on the token contract destroys the tokens without invoking any TrashCan function, so no `ERC20Deposited` event is emitted. `burnERC20` is the only path that guarantees an event.
 
+**Non-hook NFT transfers produce no event.** Plain ERC721 `transferFrom` (the default in most wallet UIs and explorer "Write" tabs) never calls `onERC721Received`. CryptoPunks-style pre-ERC721 transfers and ERC-223 `tokenReceived` are absorbed by the catch-all `fallback()`, which only emits on non-zero `msg.value`. In all three cases the asset is still destroyed, just without a receipt. Event receipts exist only for the `safeTransferFrom`/`safeBatchTransferFrom` paths, ETH, and `burnERC20` — off-chain consumers should treat the token contract's own `Transfer`/`TransferSingle`/`TransferBatch` events to the TrashCan address as the authoritative record for everything else.
+
 ## Deployment
 
 The contract has no constructor and no initialisation. Deploy and it is immediately operational.
