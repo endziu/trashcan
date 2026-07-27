@@ -133,7 +133,13 @@ contract TrashCan {
     /// @notice ERC1155 batch-transfer receiver hook. Always accepts; emits
     ///         ERC1155BatchDeposited.
     /// @dev Token IDs and amounts are intentionally omitted from the event to save gas.
-    ///      Recover the batch contents from the token contract's TransferBatch event.
+    ///      EIP-1155 permits safeBatchTransferFrom to emit either TransferBatch or a
+    ///      series of TransferSingle events, so a fully compliant token may invoke
+    ///      this hook while emitting only TransferSingle — do not assume TransferBatch
+    ///      exists in the same transaction. All fields of ERC1155BatchDeposited are
+    ///      indexed (zero data bytes), so two batch deposits from the same
+    ///      (token, from) pair in one transaction produce identical logs,
+    ///      distinguishable only by log index.
     ///      Unauthenticated — see onERC721Received for the forged-event caveat.
     /// @return bytes4 ERC1155 batch-transfer magic value (0xbc197c81).
     function onERC1155BatchReceived(
