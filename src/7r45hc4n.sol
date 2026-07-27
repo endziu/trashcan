@@ -21,19 +21,6 @@ contract TrashCan {
     event ERC1155SingleDeposited(address indexed token, address indexed sender, uint256 indexed tokenId, uint256 amount);
     event ERC1155BatchDeposited(address indexed token, address indexed sender);
 
-    /// @dev Reentrancy flag for burnERC20. Plain storage (not transient) to avoid
-    ///      a Cancun-only opcode dependency that bricks the contract on older chains.
-    bool _entered;
-
-    /// @dev Blocks reentry into burnERC20 via a token transfer hook, which would
-    ///      otherwise double-count the balance delta and over-report the burn.
-    modifier nonReentrant() {
-        require(!_entered, "reentrant");
-        _entered = true;
-        _;
-        _entered = false;
-    }
-
     // ============================================================================
     // ETH ACCEPTANCE
     // ============================================================================
@@ -70,17 +57,15 @@ contract TrashCan {
     ///      amount requested. For fee-on-transfer tokens these may differ.
     ///      Reverts if _token is not a deployed contract or if nothing is received (e.g. 100%-fee token).
     ///      ERC777 tokens that enforce ERC-1820 hooks on the transferFrom path may revert.
-    ///      Non-reentrant: a token whose transfer hook calls back into burnERC20 reverts
-    ///      rather than emitting an inflated amount. Reentry into burn() (ETH) is
-    ///      unaffected and remains harmless.
-    ///      The received amount is clamped to _amount: a token hook or rebase that
-    ///      inflates the balance delta during the transferFrom window cannot inflate
-    ///      the emitted receipt beyond what the caller actually authorized.
+    ///      The received amount is clamped to _amount: a token hook, rebase, or nested
+    ///      reentrant burnERC20 call that inflates the balance delta during the
+    ///      transferFrom window cannot inflate the emitted receipt beyond what the
+    ///      caller actually authorized.
     ///      Negative-rebase/deflationary tokens that shrink the contract's existing
     ///      balance during the call saturate to zero instead of underflow-panicking.
     /// @param _token ERC20 token contract address.
     /// @param _amount Number of tokens to pull (pre-fee for fee-on-transfer tokens).
-    function burnERC20(address _token, uint256 _amount) external nonReentrant {
+    function burnERC20(address _token, uint256 _amount) external {
         require(_token != address(0), "zero address");
         require(_amount > 0, "amount is zero");
         require(_token.code.length > 0, "not a contract");

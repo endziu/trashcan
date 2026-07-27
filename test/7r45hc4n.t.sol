@@ -2,6 +2,7 @@
 pragma solidity 0.8.36;
 
 import {Test} from "forge-std/Test.sol";
+import {Vm} from "forge-std/Vm.sol";
 import {TrashCan} from "../src/7r45hc4n.sol";
 
 // ============================================================================
@@ -133,7 +134,7 @@ contract MockERC20Reentrant {
 }
 
 // Calls back into TrashCan.burnERC20() during transferFrom — the balance-delta
-// double-count vector the nonReentrant guard exists to block.
+// double-count vector the per-call clamp neutralizes (no reentrancy guard needed).
 contract MockERC20ReentrantBurn {
     TrashCan internal immutable TARGET;
     bool internal entered;
@@ -403,11 +404,23 @@ contract TrashCanTest is Test {
         trash.burnERC20(address(reentrant), 1e18);
     }
 
-    function test_burnERC20_revertsOnReentrantBurnERC20() public {
+    function test_burnERC20_nestedReentrantBurnDoesNotInflate() public {
         MockERC20ReentrantBurn reentrant = new MockERC20ReentrantBurn(address(trash));
-        // Without the guard the outer call would emit amount*2 for one transfer.
-        vm.expectRevert("ERC20 transfer failed"); // inner "reentrant" bubbles through _safeTransferFrom
+        // Nested call pulls 1e18 twice (inner + outer), doubling the mock's balance.
+        // The per-call clamp bounds each emitted receipt to the amount that call
+        // requested, so total emitted equals total received — no inflation.
+        vm.recordLogs();
         trash.burnERC20(address(reentrant), 1e18);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bytes32 sig = keccak256("ERC20Deposited(address,address,uint256)");
+        uint256 totalEmitted;
+        for (uint256 i = 0; i < logs.length; i++) {
+            if (logs[i].topics[0] == sig) {
+                totalEmitted += uint256(logs[i].topics[3]);
+            }
+        }
+        assertEq(reentrant.balanceOf(address(trash)), 2e18);
+        assertEq(totalEmitted, 2e18);
     }
 
     function test_burnERC20_guardClearsBetweenCalls() public {
