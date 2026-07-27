@@ -21,9 +21,9 @@ contract TrashCan {
     event ERC1155SingleDeposited(address indexed token, address indexed sender, uint256 indexed tokenId, uint256 amount);
     event ERC1155BatchDeposited(address indexed token, address indexed sender);
 
-    /// @dev Reentrancy flag for burnERC20. Transient storage: cleared at end of tx,
-    ///      ~100 gas per set vs ~5,000 for a cold storage slot.
-    bool transient _entered;
+    /// @dev Reentrancy flag for burnERC20. Plain storage (not transient) to avoid
+    ///      a Cancun-only opcode dependency that bricks the contract on older chains.
+    bool _entered;
 
     /// @dev Blocks reentry into burnERC20 via a token transfer hook, which would
     ///      otherwise double-count the balance delta and over-report the burn.
