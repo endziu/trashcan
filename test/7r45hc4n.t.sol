@@ -42,6 +42,28 @@ contract MockERC20Reverting {
     }
 }
 
+// Tether Gold-style: transfer actually succeeds but the function returns false.
+contract MockERC20FalseOnSuccess {
+    mapping(address => uint256) public balanceOf;
+    mapping(address => mapping(address => uint256)) public allowance;
+
+    function mint(address to, uint256 amount) external {
+        balanceOf[to] += amount;
+    }
+
+    function approve(address spender, uint256 amount) external returns (bool) {
+        allowance[msg.sender][spender] = amount;
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint256 amount) external returns (bool) {
+        allowance[from][msg.sender] -= amount;
+        balanceOf[from] -= amount;
+        balanceOf[to] += amount;
+        return false;
+    }
+}
+
 // USDT-style: transferFrom succeeds but returns nothing (no bool).
 contract MockERC20NoReturn {
     mapping(address => uint256) public balanceOf;
@@ -215,6 +237,7 @@ contract TrashCanTest is Test {
     MockERC20 internal erc20;
     MockERC20Reverting internal erc20Rev;
     MockERC20NoReturn internal erc20NoReturn;
+    MockERC20FalseOnSuccess internal erc20FalseOnSuccess;
     MockERC721 internal erc721;
     MockERC1155 internal erc1155;
 
@@ -232,6 +255,7 @@ contract TrashCanTest is Test {
         erc20 = new MockERC20();
         erc20Rev = new MockERC20Reverting();
         erc20NoReturn = new MockERC20NoReturn();
+        erc20FalseOnSuccess = new MockERC20FalseOnSuccess();
         erc721 = new MockERC721();
         erc1155 = new MockERC1155();
 
@@ -239,6 +263,7 @@ contract TrashCanTest is Test {
         vm.deal(bob, 100 ether);
         erc20.mint(alice, 1000e18);
         erc20NoReturn.mint(alice, 1000e18);
+        erc20FalseOnSuccess.mint(alice, 1000e18);
         erc721.mint(alice, 1);
         erc721.mint(alice, 2);
         erc1155.mint(alice, 10, 500);
@@ -353,9 +378,25 @@ contract TrashCanTest is Test {
         assertEq(erc20NoReturn.balanceOf(address(trash)), 100e18);
     }
 
+    function test_burnERC20_succeedsOnFalseReturnFromRealTransfer() public {
+        // AUDIT-7: a token whose transferFrom actually moves balance but returns
+        // false (Tether Gold-style) must not hard-revert. burnERC20 relies on the
+        // balance delta, not the return value.
+        vm.startPrank(alice);
+        erc20FalseOnSuccess.approve(address(trash), 100e18);
+        vm.expectEmit(true, true, true, false);
+        emit ERC20Deposited(address(erc20FalseOnSuccess), alice, 100e18);
+        trash.burnERC20(address(erc20FalseOnSuccess), 100e18);
+        vm.stopPrank();
+        assertEq(erc20FalseOnSuccess.balanceOf(address(trash)), 100e18);
+    }
+
     function test_burnERC20_revertsOnTransferFailure() public {
+        // Token returns false and never actually moves balance: call succeeds
+        // (no revert from _safeTransferFrom, per AUDIT-7), but the balance-delta
+        // check catches that nothing was actually received.
         vm.prank(alice);
-        vm.expectRevert("ERC20 transfer failed");
+        vm.expectRevert("nothing received");
         trash.burnERC20(address(erc20Rev), 1e18);
     }
 

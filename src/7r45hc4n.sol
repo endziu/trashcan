@@ -78,13 +78,16 @@ contract TrashCan {
         emit ERC20Deposited(_token, msg.sender, received);
     }
 
-    /// @dev Handles both bool-returning ERC20s and no-return-value tokens (e.g. USDT).
-    ///      Reverts with "ERC20 transfer failed" on any failure.
+    /// @dev Only checks the call succeeded, not any returned bool. burnERC20's own
+    ///      balance-delta check (received > 0) is strictly stronger evidence of a
+    ///      real transfer than a token's self-reported return value, so this also
+    ///      tolerates tokens that return false on success (e.g. Tether Gold) or a
+    ///      non-canonical return value, instead of hard-reverting on decode.
     function _safeTransferFrom(address token, address from, address to, uint256 amount) internal {
-        (bool ok, bytes memory data) = token.call(
+        (bool ok,) = token.call(
             abi.encodeWithSelector(IERC20.transferFrom.selector, from, to, amount)
         );
-        require(ok && (data.length == 0 || abi.decode(data, (bool))), "ERC20 transfer failed");
+        require(ok, "ERC20 transfer failed");
     }
 
     // ============================================================================
