@@ -73,6 +73,9 @@ contract TrashCan {
     ///      Non-reentrant: a token whose transfer hook calls back into burnERC20 reverts
     ///      rather than emitting an inflated amount. Reentry into burn() (ETH) is
     ///      unaffected and remains harmless.
+    ///      The received amount is clamped to _amount: a token hook or rebase that
+    ///      inflates the balance delta during the transferFrom window cannot inflate
+    ///      the emitted receipt beyond what the caller actually authorized.
     /// @param _token ERC20 token contract address.
     /// @param _amount Number of tokens to pull (pre-fee for fee-on-transfer tokens).
     function burnERC20(address _token, uint256 _amount) external nonReentrant {
@@ -82,6 +85,7 @@ contract TrashCan {
         uint256 balanceBefore = IERC20(_token).balanceOf(address(this));
         _safeTransferFrom(_token, msg.sender, address(this), _amount);
         uint256 received = IERC20(_token).balanceOf(address(this)) - balanceBefore;
+        if (received > _amount) received = _amount;
         require(received > 0, "nothing received");
         emit ERC20Deposited(_token, msg.sender, received);
     }
