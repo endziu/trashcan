@@ -20,6 +20,16 @@ interface IERC20 {
 }
 
 contract TrashCan {
+    bool private erc20BurnEntered;
+
+    // Storage-based guard keeps compatibility with the Paris EVM target.
+    modifier nonReentrant() {
+        require(!erc20BurnEntered, "reentrant ERC20 burn");
+        erc20BurnEntered = true;
+        _;
+        erc20BurnEntered = false;
+    }
+
     event ETHDeposited(address indexed sender, uint256 indexed amount);
     event ERC20Deposited(address indexed token, address indexed sender, uint256 indexed amount);
     event ERC721Deposited(address indexed token, address indexed sender, uint256 indexed tokenId);
@@ -62,15 +72,15 @@ contract TrashCan {
     ///      amount requested. For fee-on-transfer tokens these may differ.
     ///      Reverts if _token is not a deployed contract or if nothing is received (e.g. 100%-fee token).
     ///      ERC777 tokens that enforce ERC-1820 hooks on the transferFrom path may revert.
-    ///      The received amount is clamped to _amount: a token hook, rebase, or nested
-    ///      reentrant burnERC20 call that inflates the balance delta during the
-    ///      transferFrom window cannot inflate the emitted receipt beyond what the
-    ///      caller actually authorized.
+    ///      Nested burnERC20 calls are rejected so their deposits cannot be counted
+    ///      again in the outer call's balance delta. The received amount is clamped
+    ///      to _amount to bound receipts when a token hook or rebase increases the
+    ///      balance beyond what the caller authorized.
     ///      Negative-rebase/deflationary tokens that shrink the contract's existing
     ///      balance during the call saturate to zero instead of underflow-panicking.
     /// @param _token ERC20 token contract address.
     /// @param _amount Number of tokens to pull (pre-fee for fee-on-transfer tokens).
-    function burnERC20(address _token, uint256 _amount) external {
+    function burnERC20(address _token, uint256 _amount) external nonReentrant {
         require(_token != address(0), "zero address");
         require(_amount > 0, "amount is zero");
         require(_token.code.length > 0, "not a contract");
@@ -80,6 +90,8 @@ contract TrashCan {
         uint256 received = balanceAfter > balanceBefore ? balanceAfter - balanceBefore : 0;
         if (received > _amount) received = _amount;
         require(received > 0, "nothing received");
+        // The guarded transfer must finish before its received amount is known.
+        // forge-lint: disable-next-line(reentrancy-events)
         emit ERC20Deposited(_token, msg.sender, received);
     }
 
@@ -89,6 +101,8 @@ contract TrashCan {
     ///      tolerates tokens that return false on success (e.g. Tether Gold) or a
     ///      non-canonical return value, instead of hard-reverting on decode.
     function _safeTransferFrom(address token, address from, address to, uint256 amount) internal {
+        // Entry is already locked; the only post-call write releases the guard.
+        // forge-lint: disable-next-item(reentrancy-no-eth)
         (bool ok,) = token.call(
             abi.encodeWithSelector(IERC20.transferFrom.selector, from, to, amount)
         );

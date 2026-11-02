@@ -155,8 +155,7 @@ contract MockERC20Reentrant {
     }
 }
 
-// Calls back into TrashCan.burnERC20() during transferFrom — the balance-delta
-// double-count vector the per-call clamp neutralizes (no reentrancy guard needed).
+// Propagates a rejected nested burnERC20 call, reverting the whole transfer.
 contract MockERC20ReentrantBurn {
     TrashCan internal immutable TARGET;
     bool internal entered;
@@ -171,6 +170,31 @@ contract MockERC20ReentrantBurn {
         if (!entered) {
             entered = true;
             TARGET.burnERC20(address(this), amount);
+        }
+        return true;
+    }
+}
+
+// Reenters after crediting a fee-reduced transfer. Catches a rejected callback
+// so the outer deposit can still complete when reentrancy is blocked.
+contract MockERC20ReentrantFee {
+    TrashCan internal immutable TARGET;
+    bool internal entered;
+    bool public nestedSucceeded;
+    bytes public nestedRevertData;
+    mapping(address => uint256) public balanceOf;
+
+    constructor(address target) {
+        TARGET = TrashCan(payable(target));
+    }
+
+    function transferFrom(address, address to, uint256 amount) external returns (bool) {
+        balanceOf[to] += amount / 2;
+        if (!entered) {
+            entered = true;
+            (nestedSucceeded, nestedRevertData) = address(TARGET).call(
+                abi.encodeCall(TrashCan.burnERC20, (address(this), amount))
+            );
         }
         return true;
     }
@@ -445,23 +469,18 @@ contract TrashCanTest is Test {
         trash.burnERC20(address(reentrant), 1e18);
     }
 
-    function test_burnERC20_nestedReentrantBurnDoesNotInflate() public {
+    function test_burnERC20_uncaughtNestedBurnRevertsTransfer() public {
         MockERC20ReentrantBurn reentrant = new MockERC20ReentrantBurn(address(trash));
-        // Nested call pulls 1e18 twice (inner + outer), doubling the mock's balance.
-        // The per-call clamp bounds each emitted receipt to the amount that call
-        // requested, so total emitted equals total received — no inflation.
-        vm.recordLogs();
+        vm.expectRevert("ERC20 transfer failed");
         trash.burnERC20(address(reentrant), 1e18);
-        Vm.Log[] memory logs = vm.getRecordedLogs();
-        bytes32 sig = keccak256("ERC20Deposited(address,address,uint256)");
-        uint256 totalEmitted;
-        for (uint256 i = 0; i < logs.length; i++) {
-            if (logs[i].topics[0] == sig) {
-                totalEmitted += uint256(logs[i].topics[3]);
-            }
-        }
-        assertEq(reentrant.balanceOf(address(trash)), 2e18);
-        assertEq(totalEmitted, 2e18);
+        assertEq(reentrant.balanceOf(address(trash)), 0);
+
+        // A reverted transfer must not leave the guard locked.
+        vm.startPrank(alice);
+        erc20.approve(address(trash), 1e18);
+        trash.burnERC20(address(erc20), 1e18);
+        vm.stopPrank();
+        assertEq(erc20.balanceOf(address(trash)), 1e18);
     }
 
     function test_burnERC20_guardClearsBetweenCalls() public {
@@ -471,6 +490,24 @@ contract TrashCanTest is Test {
         trash.burnERC20(address(erc20), 10e18);
         vm.stopPrank();
         assertEq(erc20.balanceOf(address(trash)), 20e18);
+    }
+
+    function testFuzz_burnERC20_nestedFeeReceiptsMatchReceived(uint256 amount) public {
+        amount = bound(amount, 2, 1000e18);
+        MockERC20ReentrantFee token = new MockERC20ReentrantFee(address(trash));
+        vm.recordLogs();
+        trash.burnERC20(address(token), amount);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bytes32 sig = keccak256("ERC20Deposited(address,address,uint256)");
+        uint256 totalEmitted;
+        for (uint256 i = 0; i < logs.length; i++) {
+            if (logs[i].emitter == address(trash) && logs[i].topics[0] == sig) {
+                totalEmitted += uint256(logs[i].topics[3]);
+            }
+        }
+        assertEq(totalEmitted, token.balanceOf(address(trash)), "nested deposits double-counted");
+        assertFalse(token.nestedSucceeded(), "nested ERC20 deposit accepted");
+        assertEq(token.nestedRevertData(), abi.encodeWithSignature("Error(string)", "reentrant ERC20 burn"));
     }
 
     function test_burnERC20_revertsOnZeroAmount() public {

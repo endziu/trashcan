@@ -87,23 +87,22 @@ The script deploys through the canonical CREATE2 factory (`0x4e59b44847b37957858
 
 | | Value |
 |---|---|
-| Runtime bytecode | 3,834 bytes |
-| Est. deploy gas | ~851,000 |
+| Runtime bytecode | 3,786 bytes |
 | Compiler | Solidity 0.8.36 (pinned in `foundry.toml`) |
 | EVM version | paris (pinned in `foundry.toml`) |
 | Optimizer runs | 1,000,000 |
 | CREATE2 factory | `0x4e59b44847b379578588920cA78FbF26c0B4956C` |
 | Salt | `0x00…00` (`bytes32(uint256(0))`) |
-| Initcode hash | `0x009f864742bc6b903a2c1e9cbbb8d643f1c551fc5ccae68a3336021c1577e700` |
-| Deployed address | `0xC669D215e704a33420f295FFd240aa1E9Cc82d69` |
+| Initcode hash | `0x0ef3d694aa562b7f8e0504e98883250bd85117234987bf1b7fb77972a6958078` |
+| Predicted CREATE2 address | `0xF43ba7c5CdD8391732919115E8E16Ea485b23a78` |
 
-The address depends on `solc_version`, `evm_version`, and `optimizer_runs` in `foundry.toml` in addition to the salt — treat any change to those three as a new version with a new address.
+The address depends on the contract source and `solc_version`, `evm_version`, and `optimizer_runs` in `foundry.toml` in addition to the salt — treat changes to the source or those settings as a new version with a new address.
 
 ## Caveats
 
 - **Fee-on-transfer ERC20s:** `burnERC20` emits the amount actually received (contract balance delta), not the amount requested. For standard tokens these are equal; for fee-on-transfer tokens the emitted amount will be less than what the caller approved.
 - **ERC777 tokens:** the contract is not registered with ERC-1820, so ERC777 transfers that enforce the recipient hook on the `transferFrom` path will revert.
-- **Nested/reentrant `burnERC20` calls do not inflate receipts:** the received amount is clamped to the amount requested and saturates at zero for negative-rebase/deflationary tokens, so a token hook that calls back into `burnERC20` (or reflects/rebases the contract's balance) cannot cause any single call to over-report what it actually pulled.
+- **Nested/reentrant `burnERC20` calls are rejected:** a reentrancy guard prevents nested deposits from being counted again in the outer call's receipt. A token that propagates the rejected callback causes the entire transfer to revert. Receipts are also clamped to the requested amount and saturate at zero for negative-rebase/deflationary tokens; rebases and reflections can still affect the observed balance delta.
 - **`ERC20Deposited` is forgeable:** any contract can implement a custom `balanceOf` and call `burnERC20` on itself to emit an arbitrary amount with nothing real destroyed. `burnERC20` is not an authenticity guarantee for unknown token addresses.
 - **Receiver hook events are unauthenticated:** the ERC721 / ERC1155 hooks are public functions. Anyone can call them directly and cause `*Deposited` events to be emitted without an actual token transfer occurring. Off-chain consumers that care about real transfers should cross-reference the corresponding `Transfer` event on the token contract. The `operator` parameter is also discarded from all three hooks, so marketplace/operator-initiated burns lose the initiator's identity in the log.
 - **`onERC1155BatchReceived` does not include token IDs or amounts** in its event, only the token contract and sender. Recover the contents from the corresponding ERC1155 `TransferSingle`/`TransferBatch` events on the token contract (EIP-1155 permits either).
