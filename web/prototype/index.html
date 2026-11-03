@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<!--
+  PROTOTYPE — THROWAWAY. Not the real website.
+  Question: "What should the 7r45hc4n website look like?"
+  Plan: four structurally different landing pages on one file, switchable via
+  ?variant=A|B|C|D (bottom bar or ← / → keys).
+    A  Neon Incinerator  — cyberpunk HUD dashboard, burn console is the hero
+    B  Public Waste Facility — municipal hazard signage, long poster scroll
+    C  The Register      — memorial / obituary, burns as a book of the dead
+    D  Datasheet         — engineering component datasheet, reference-first
+  All burns are STUBBED: no wallet, no RPC, feed data is fake.
+  Run: open this file directly, or `python3 -m http.server 8000 -d web/prototype`.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7r45hc4n — prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Share+Tech+Mono&family=Archivo+Black&family=Archivo+Narrow:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Cormorant+SC:wght@500;600&family=Special+Elite&family=Permanent+Marker&family=Bagel+Fat+One&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100%; }
+  .variant { display: none; min-height: 100vh; }
+  .variant.on { display: block; }
+  button { font: inherit; cursor: pointer; }
+  input, select { font: inherit; }
+
+  /* ======================= PROTOTYPE SWITCHER (not part of designs) ======================= */
+  #proto-bar {
+    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 9999;
+    display: flex; align-items: center; gap: 4px; padding: 5px;
+    background: #fff; color: #111; border: 2px solid #111; border-radius: 999px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.35); font: 600 13px/1 system-ui, sans-serif;
+  }
+  #proto-bar button { width: 32px; height: 32px; border: 0; border-radius: 50%; background: #111; color: #fff; font-size: 16px; }
+  #proto-bar button:hover { background: #444; }
+  #proto-bar .lbl { padding: 0 14px; min-width: 230px; text-align: center; white-space: nowrap; }
+  #proto-bar .tag { font-size: 10px; letter-spacing: .08em; background: #ff3b3b; color: #fff; padding: 3px 6px; border-radius: 4px; margin-right: 8px; }
+
+  /* =================================== A · NEON INCINERATOR =================================== */
+  #A { --bg:#06050a; --mag:#ff2bd6; --cyan:#22f1ff; --acid:#c8ff2e; --dim:#a49dc4; --panel:rgba(18,14,30,.72);
+       background: var(--bg); color: #e8e4ff; font-family: 'Share Tech Mono', monospace; position: relative; overflow: hidden; }
+  #A::before { /* scanlines */ content:""; position: fixed; inset: 0; pointer-events: none; z-index: 5;
+       background: repeating-linear-gradient(0deg, rgba(0,0,0,.14) 0 1px, transparent 1px 4px); }
+  #A .grid-floor { position: absolute; left: -50%; right: -50%; bottom: -10vh; height: 55vh; z-index: 0;
+       background-image: linear-gradient(var(--mag) 1px, transparent 1px), linear-gradient(90deg, var(--mag) 1px, transparent 1px);
+       background-size: 60px 60px; transform: perspective(500px) rotateX(62deg); opacity: .22;
+       mask-image: linear-gradient(to top, #000 10%, transparent 90%); animation: a-floor 3s linear infinite; }
+  @keyframes a-floor { to { background-position: 0 60px, 0 0; } }
+  #A .glow { position: absolute; width: 700px; height: 700px; border-radius: 50%; filter: blur(120px); opacity: .25; z-index: 0; }
+  #A .glow.m { background: var(--mag); top: -300px; left: -200px; }
+  #A .glow.c { background: var(--cyan); bottom: -350px; right: -250px; }
+  #A .wrap { position: relative; z-index: 2; max-width: 1320px; margin: 0 auto; padding: 18px 28px 110px; }
+  #A .hud { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(34,241,255,.25); padding-bottom: 12px; font-size: 15px; letter-spacing: .06em; color: var(--dim); }
+  #A .hud b { color: var(--cyan); font-weight: 400; }
+  #A .hud .lights span { margin-left: 22px; }
+  #A .hud .lights i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--acid); box-shadow: 0 0 8px var(--acid); margin-right: 7px; }
+  #A .hero { padding: 48px 0 26px; }
+  #A .kicker { color: var(--mag); letter-spacing: .2em; font-size: 16px; }
+  #A h1 { font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: clamp(64px, 11vw, 150px); line-height: .9; letter-spacing: -.02em; position: relative; display: inline-block; margin: 10px 0 14px; color: #fff; text-shadow: 0 0 30px rgba(255,43,214,.5); }
+  #A h1::before, #A h1::after { content: attr(data-t); position: absolute; inset: 0; }
+  #A h1::before { color: var(--cyan); transform: translate(-3px, 0); mix-blend-mode: screen; clip-path: inset(0 0 55% 0); animation: a-glitch 2.8s infinite steps(1); }
+  #A h1::after { color: var(--mag); transform: translate(3px, 0); mix-blend-mode: screen; clip-path: inset(55% 0 0 0); animation: a-glitch 3.4s infinite reverse steps(1); }
+  @keyframes a-glitch { 0%,88%,100% { transform: translate(0); } 90% { transform: translate(-6px, 2px); } 93% { transform: translate(5px,-2px); } 96% { transform: translate(-2px,1px); } }
+  #A .sub { font-size: 22px; line-height: 1.45; color: #ddd8f2; max-width: 640px; }
+  #A .sub em { color: var(--acid); font-style: normal; }
+  #A .cols { display: grid; grid-template-columns: 1fr 1.1fr 1fr; gap: 22px; margin-top: 26px; }
+  #A .panel { background: var(--panel); border: 1px solid rgba(34,241,255,.28); backdrop-filter: blur(6px); position: relative;
+              clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px)); }
+  #A .panel h3 { font-family: 'Chakra Petch'; font-size: 16px; font-weight: 700; letter-spacing: .14em; color: var(--cyan); padding: 12px 16px; border-bottom: 1px solid rgba(34,241,255,.18); display: flex; justify-content: space-between; }
+  #A .panel h3 small { color: var(--dim); letter-spacing: .06em; font-size: 13px; font-weight: 400; }
+  #A .feed { height: 470px; overflow: hidden; padding: 8px 16px; font-size: 16px; line-height: 1.35; }
+  #A .feed div { padding: 7px 0; border-bottom: 1px dashed rgba(255,255,255,.06); display: grid; grid-template-columns: 68px 1fr auto; gap: 8px; }
+  #A .feed .k { color: var(--mag); }
+  #A .feed .t { color: var(--dim); }
+  #A .feed .fresh { animation: a-flash 1.2s ease-out; }
+  @keyframes a-flash { from { background: rgba(255,43,214,.35); } to { background: transparent; } }
+  #A .reactor { display: grid; place-items: center; height: 300px; position: relative; }
+  #A .ring { position: absolute; border-radius: 50%; border: 2px solid transparent; }
+  #A .r1 { width: 240px; height: 240px; border-top-color: var(--mag); border-bottom-color: var(--mag); animation: spin 6s linear infinite; box-shadow: 0 0 30px rgba(255,43,214,.25) inset; }
+  #A .r2 { width: 190px; height: 190px; border-left-color: var(--cyan); border-right-color: var(--cyan); animation: spin 4s linear infinite reverse; }
+  #A .r3 { width: 140px; height: 140px; border: 1px dashed rgba(200,255,46,.6); animation: spin 14s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #A .core { width: 92px; height: 92px; border-radius: 50%; background: radial-gradient(circle, #fff 0, var(--mag) 30%, #3a0033 70%); box-shadow: 0 0 60px var(--mag), 0 0 120px rgba(255,43,214,.5); animation: a-pulse 1.6s ease-in-out infinite; }
+  #A .core.hot { animation: a-pulse .2s ease-in-out 6; }
+  @keyframes a-pulse { 50% { transform: scale(1.12); filter: brightness(1.4); } }
+  #A .tabs { display: flex; padding: 0 16px; gap: 6px; }
+  #A .tabs button { flex: 1; padding: 9px 0; background: transparent; color: var(--dim); border: 1px solid rgba(34,241,255,.25); font-family: 'Chakra Petch'; font-size: 15px; font-weight: 600; letter-spacing: .06em; }
+  #A .tabs button.on { color: var(--bg); background: var(--cyan); border-color: var(--cyan); box-shadow: 0 0 18px rgba(34,241,255,.5); }
+  #A .console { padding: 16px; }
+  #A label { display: block; font-size: 14px; color: var(--dim); letter-spacing: .1em; margin: 10px 0 6px; }
+  #A input { width: 100%; font-size: 20px; padding: 11px 12px; background: rgba(0,0,0,.5); border: 1px solid rgba(255,43,214,.4); color: #fff; outline: none; }
+  #A input:focus { border-color: var(--mag); box-shadow: 0 0 14px rgba(255,43,214,.4); }
+  #A .go { margin-top: 18px; width: 100%; padding: 16px; border: 0; background: var(--mag); color: #120010; font-family: 'Chakra Petch'; font-weight: 700; letter-spacing: .3em; font-size: 16px; box-shadow: 0 0 30px rgba(255,43,214,.55);
+           clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%); transition: filter .15s; }
+  #A .go:hover { filter: brightness(1.25); }
+  #A .hint { font-size: 15px; color: #cfc9e8; margin-top: 12px; line-height: 1.5; }
+  #A .sys { padding: 8px 16px 16px; font-size: 15.5px; line-height: 1.5; }
+  #A .sys li { list-style: none; padding: 7px 0 7px 22px; position: relative; color: #e4e0f5; border-bottom: 1px dashed rgba(255,255,255,.06); }
+  #A .sys li::before { content: "!"; position: absolute; left: 0; color: var(--bg); background: var(--acid); width: 14px; height: 14px; font-size: 10px; display: grid; place-items: center; top: 9px; }
+  #A .addr { margin-top: 22px; display: flex; align-items: center; gap: 18px; padding: 16px 20px; border: 1px solid var(--mag); background: rgba(255,43,214,.06); }
+  #A .addr code { font-size: clamp(14px, 1.8vw, 22px); color: #fff; letter-spacing: .04em; flex: 1; text-shadow: 0 0 12px rgba(34,241,255,.6); }
+  #A .addr button { padding: 10px 18px; background: transparent; border: 1px solid var(--cyan); color: var(--cyan); letter-spacing: .1em; font-size: 16px; }
+  #A .addr .lab { color: var(--mag); font-size: 15px; letter-spacing: .14em; }
+  #A .stats { display: flex; gap: 0; margin-top: 22px; border: 1px solid rgba(34,241,255,.2); }
+  #A .stats div { flex: 1; padding: 14px 18px; border-right: 1px solid rgba(34,241,255,.2); }
+  #A .stats div:last-child { border-right: 0; }
+  #A .stats b { display: block; font-family: 'Chakra Petch'; font-size: 32px; color: #fff; }
+  #A .stats span { font-size: 14px; color: var(--dim); letter-spacing: .08em; }
+
+  /* ================================= B · PUBLIC WASTE FACILITY ================================= */
+  #B { --y:#ffd400; --k:#0d0d0d; background: var(--y); color: var(--k); font-family: 'Archivo Narrow', sans-serif; }
+  #B .stripes { height: 34px; background: repeating-linear-gradient(-45deg, var(--k) 0 26px, var(--y) 26px 52px); }
+  #B .wrap { max-width: 1200px; margin: 0 auto; padding: 0 32px; }
+  #B header { display: flex; justify-content: space-between; align-items: center; padding: 18px 0; border-bottom: 6px solid var(--k); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; font-size: 15px; }
+  #B header .badge { background: var(--k); color: var(--y); padding: 6px 12px; }
+  #B .hero { padding: 40px 0 34px; border-bottom: 6px solid var(--k); }
+  #B .hero .no { font-family: 'Archivo Black'; font-size: 22px; }
+  #B h1 { font-family: 'Archivo Black'; font-size: clamp(70px, 13vw, 190px); line-height: .82; letter-spacing: -.035em; text-transform: uppercase; margin: 10px 0 24px; }
+  #B .hero-row { display: grid; grid-template-columns: 1.4fr 1fr; gap: 32px; align-items: end; }
+  #B .hero p { font-size: 24px; line-height: 1.25; font-weight: 600; max-width: 640px; }
+  #B .hours { border: 5px solid var(--k); padding: 18px 20px; font-weight: 700; text-transform: uppercase; }
+  #B .hours div { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 2px solid var(--k); font-size: 17px; }
+  #B .hours div:last-child { border-bottom: 0; }
+  #B .addrbar { background: var(--k); color: var(--y); padding: 26px 32px; display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+  #B .addrbar .l { font-family: 'Archivo Black'; font-size: 16px; text-transform: uppercase; }
+  #B .addrbar code { font-family: 'IBM Plex Mono', monospace; font-size: clamp(15px, 2.2vw, 28px); flex: 1; word-break: break-all; }
+  #B .addrbar button { background: var(--y); color: var(--k); border: 0; padding: 14px 22px; font-family: 'Archivo Black'; text-transform: uppercase; font-size: 15px; }
+  #B section { padding: 48px 0; border-bottom: 6px solid var(--k); }
+  #B h2 { font-family: 'Archivo Black'; font-size: 54px; text-transform: uppercase; letter-spacing: -.02em; line-height: 1; margin-bottom: 26px; display: flex; align-items: center; gap: 18px; }
+  #B h2 .n { background: var(--k); color: var(--y); font-size: 26px; padding: 6px 12px; }
+  #B .mats { display: grid; grid-template-columns: repeat(4, 1fr); border: 5px solid var(--k); }
+  #B .mat { padding: 22px; border-right: 5px solid var(--k); background: var(--y); cursor: pointer; transition: background .1s; }
+  #B .mat:last-child { border-right: 0; }
+  #B .mat:hover, #B .mat.on { background: var(--k); color: var(--y); }
+  #B .mat .pict { width: 86px; height: 86px; border: 5px solid currentColor; border-radius: 50%; display: grid; place-items: center; font-family: 'Archivo Black'; font-size: 26px; margin-bottom: 18px; }
+  #B .mat h4 { font-family: 'Archivo Black'; font-size: 26px; text-transform: uppercase; }
+  #B .mat p { font-size: 17px; line-height: 1.3; margin-top: 8px; font-weight: 600; }
+  #B .mat code { font-family: 'IBM Plex Mono'; font-size: 13px; display: block; margin-top: 12px; }
+  #B .dispose { display: grid; grid-template-columns: 1fr 380px; gap: 32px; margin-top: 32px; align-items: start; }
+  #B .form { border: 5px solid var(--k); padding: 24px; background: #fff; }
+  #B .form label { display: block; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+  #B .form input { width: 100%; padding: 14px; border: 4px solid var(--k); font-size: 22px; font-weight: 700; margin-bottom: 18px; background: #fff; }
+  #B .form button { width: 100%; padding: 20px; background: #e4002b; color: #fff; border: 4px solid var(--k); font-family: 'Archivo Black'; font-size: 24px; text-transform: uppercase; letter-spacing: .02em; box-shadow: 6px 6px 0 var(--k); }
+  #B .form button:active { transform: translate(4px,4px); box-shadow: 2px 2px 0 var(--k); }
+  #B .form .warn { margin-top: 16px; font-weight: 700; font-size: 15px; display: flex; gap: 10px; }
+  #B .tri { width: 0; height: 0; border-left: 14px solid transparent; border-right: 14px solid transparent; border-bottom: 24px solid var(--k); flex: none; position: relative; }
+  #B .ticket { background: #fff; padding: 22px 22px 30px; font-family: 'IBM Plex Mono'; font-size: 13px; line-height: 1.6; box-shadow: 8px 8px 0 var(--k); border: 3px solid var(--k);
+               mask: radial-gradient(circle 8px at 50% 100%, transparent 98%, #000) 0 0 / 20px 100%; }
+  #B .ticket h5 { font-family: 'Archivo Black'; font-size: 20px; text-align: center; text-transform: uppercase; border-bottom: 2px dashed var(--k); padding-bottom: 10px; margin-bottom: 10px; }
+  #B .ticket .row { display: flex; justify-content: space-between; gap: 10px; }
+  #B .ticket .fresh { background: var(--y); }
+  #B .rules { columns: 2; column-gap: 48px; }
+  #B .rule { break-inside: avoid; display: grid; grid-template-columns: 64px 1fr; gap: 14px; padding: 16px 0; border-top: 3px solid var(--k); }
+  #B .rule .s { font-family: 'Archivo Black'; font-size: 32px; line-height: 1; }
+  #B .rule h4 { font-family: 'Archivo Black'; text-transform: uppercase; font-size: 18px; margin-bottom: 4px; }
+  #B .rule p { font-size: 16px; line-height: 1.35; }
+  #B footer { padding: 40px 0 120px; display: flex; justify-content: space-between; font-family: 'Archivo Black'; text-transform: uppercase; font-size: 20px; gap: 20px; flex-wrap: wrap; }
+
+  /* ===================================== C · XEROX ZINE ===================================== */
+  #C { --paper:#f4f1ea; --pink:#ff48b0; --blue:#0078bf; --k:#141414; color: var(--k); font-family: 'Special Elite', monospace; font-size: 18px; line-height: 1.5; overflow: hidden; position: relative;
+       background-color: var(--paper);
+       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  #C .wrap { max-width: 1240px; margin: 0 auto; padding: 40px 32px 140px; position: relative; }
+  #C .dot { position: absolute; border-radius: 50%; mix-blend-mode: multiply; pointer-events: none;
+            background-image: radial-gradient(currentColor 34%, transparent 36%); background-size: 11px 11px; }
+  #C .dot.p { color: var(--pink); width: 520px; height: 520px; top: -120px; right: -140px; }
+  #C .dot.b { color: var(--blue); width: 380px; height: 380px; top: 1000px; left: -160px; }
+  #C .ransom { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 10px 0 18px; position: relative; z-index: 2; }
+  #C .ransom span { display: inline-block; line-height: 1; padding: 8px 14px; box-shadow: 3px 4px 0 rgba(0,0,0,.25); }
+  #C .ransom span:nth-child(1) { font-family: 'Archivo Black'; font-size: 120px; background: var(--k); color: var(--paper); transform: rotate(-4deg); }
+  #C .ransom span:nth-child(2) { font-family: 'Cormorant Garamond'; font-weight: 600; font-style: italic; font-size: 130px; background: #fff; transform: rotate(3deg); }
+  #C .ransom span:nth-child(3) { font-family: 'Permanent Marker'; font-size: 110px; background: var(--pink); color: #fff; transform: rotate(-2deg); }
+  #C .ransom span:nth-child(4) { font-family: 'Special Elite'; font-size: 120px; background: #ffe600; transform: rotate(5deg); }
+  #C .ransom span:nth-child(5) { font-family: 'Archivo Black'; font-size: 110px; background: var(--blue); color: #fff; transform: rotate(-6deg); border-radius: 50%; padding: 18px 30px; }
+  #C .ransom span:nth-child(6) { font-family: 'IBM Plex Mono'; font-weight: 500; font-size: 120px; background: #fff; border: 5px solid var(--k); transform: rotate(2deg); }
+  #C .ransom span:nth-child(7) { font-family: 'Cormorant SC'; font-size: 130px; background: var(--k); color: #ffe600; transform: rotate(-3deg); }
+  #C .ransom span:nth-child(8) { font-family: 'Permanent Marker'; font-size: 120px; background: #fff; color: var(--pink); transform: rotate(4deg); }
+  #C .tagline { font-family: 'Permanent Marker'; font-size: 40px; line-height: 1.1; max-width: 760px; transform: rotate(-1.5deg); position: relative; z-index: 2; }
+  #C .tagline mark { background: linear-gradient(transparent 55%, var(--pink) 55%, var(--pink) 90%, transparent 90%); color: inherit; }
+  #C .riso { text-shadow: 3px 2px 0 rgba(255,72,176,.75), -2px -1px 0 rgba(0,120,191,.6); }
+  #C .tape { position: absolute; width: 110px; height: 30px; background: rgba(255,240,170,.75); box-shadow: 0 1px 2px rgba(0,0,0,.15); z-index: 3; }
+  #C .sticker { position: absolute; z-index: 4; font-family: 'Archivo Black'; text-transform: uppercase; text-align: center; display: grid; place-items: center; line-height: 1; box-shadow: 3px 4px 0 rgba(0,0,0,.25); }
+  #C .s1 { top: 70px; right: 60px; width: 160px; height: 160px; border-radius: 50%; background: #ffe600; font-size: 24px; transform: rotate(14deg); border: 4px dashed var(--k); }
+  #C .s2 { top: 255px; right: 250px; background: var(--k); color: #fff; padding: 10px 16px; font-size: 20px; transform: rotate(-8deg); }
+  #C .board { display: grid; grid-template-columns: repeat(12, 1fr); gap: 28px; margin-top: 50px; position: relative; z-index: 2; }
+  #C .scrap { background: #fff; padding: 26px 28px; position: relative; box-shadow: 4px 6px 0 rgba(0,0,0,.18); }
+  #C .scrap.torn { clip-path: polygon(0 3%, 6% 0, 14% 2%, 22% 0, 33% 3%, 45% 0, 58% 2%, 70% 0, 82% 3%, 92% 0, 100% 2%, 100% 97%, 93% 100%, 81% 97%, 68% 100%, 55% 97%, 42% 100%, 30% 97%, 18% 100%, 7% 97%, 0 100%); }
+  #C h2 { font-family: 'Archivo Black'; text-transform: uppercase; font-size: 40px; line-height: .95; margin-bottom: 16px; letter-spacing: -.01em; }
+  #C .why { grid-column: 1 / 7; transform: rotate(-1.2deg); }
+  #C .why li { list-style: none; padding: 10px 0 10px 40px; position: relative; border-bottom: 2px dashed #bbb; }
+  #C .why li::before { content: "✗"; position: absolute; left: 0; top: 4px; font-family: 'Permanent Marker'; font-size: 30px; color: var(--pink); }
+  #C .why li.ok::before { content: "✓"; color: var(--blue); }
+  #C .feed { grid-column: 7 / 13; background: var(--k); color: var(--paper); transform: rotate(1.5deg); margin-top: 40px; }
+  #C .feed h2 { color: #ffe600; }
+  #C .feed .row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px dashed #555; font-size: 17px; }
+  #C .feed .row s { text-decoration-color: var(--pink); text-decoration-thickness: 3px; }
+  #C .feed .row .t { color: #aaa; white-space: nowrap; }
+  #C .feed .fresh { animation: c-stamp .6s ease-out; }
+  @keyframes c-stamp { from { transform: scale(1.15); background: var(--pink); } }
+  #C .how { grid-column: 1 / 13; display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; margin-top: 20px; }
+  #C .step { background: #fff; padding: 22px; position: relative; box-shadow: 4px 6px 0 rgba(0,0,0,.18); }
+  #C .step:nth-child(odd) { transform: rotate(-1.8deg); } #C .step:nth-child(even) { transform: rotate(1.4deg) translateY(14px); }
+  #C .step .n { position: absolute; top: -22px; left: -14px; width: 54px; height: 54px; border-radius: 50%; background: var(--pink); color: #fff; font-family: 'Archivo Black'; font-size: 24px; display: grid; place-items: center; transform: rotate(-10deg); }
+  #C .step h3 { font-family: 'Permanent Marker'; font-size: 30px; margin: 8px 0 6px; }
+  #C .step code { display: block; font-family: 'IBM Plex Mono'; font-size: 14.5px; background: #eee; padding: 8px 10px; margin-top: 10px; }
+  #C .coupon { grid-column: 2 / 8; margin-top: 40px; background: #ffe600; padding: 30px; border: 4px dashed var(--k); position: relative; transform: rotate(-.8deg); }
+  #C .coupon::before { content: "✂"; position: absolute; top: -26px; left: 30px; font-size: 34px; background: var(--paper); padding: 0 6px; }
+  #C .coupon h2 { font-size: 46px; }
+  #C .coupon .row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+  #C .coupon input, #C .coupon select { font-family: 'Special Elite'; font-size: 24px; padding: 10px 12px; border: 3px solid var(--k); background: #fff; }
+  #C .coupon input { width: 170px; }
+  #C .coupon button { font-family: 'Archivo Black'; font-size: 24px; text-transform: uppercase; background: var(--k); color: #fff; border: 0; padding: 12px 24px; transform: rotate(-2deg); box-shadow: 4px 4px 0 var(--pink); }
+  #C .coupon button:active { transform: rotate(-2deg) translate(3px,3px); box-shadow: 1px 1px 0 var(--pink); }
+  #C .coupon small { display: block; margin-top: 14px; font-size: 15px; }
+  #C .addr { grid-column: 8 / 13; margin-top: 70px; background: var(--blue); color: #fff; padding: 24px; transform: rotate(2deg); }
+  #C .addr .lbl { font-family: 'Permanent Marker'; font-size: 26px; }
+  #C .addr code { display: block; font-family: 'IBM Plex Mono'; font-size: 15px; word-break: break-all; margin: 10px 0 14px; background: rgba(255,255,255,.15); padding: 10px; }
+  #C .addr button { font-family: 'Archivo Black'; background: #fff; color: var(--blue); border: 0; padding: 10px 16px; font-size: 16px; text-transform: uppercase; }
+  #C .fine { grid-column: 1 / 13; margin-top: 40px; border: 5px solid var(--k); padding: 28px; background: #fff; transform: rotate(-.5deg); }
+  #C .fine h2 span { font-family: 'Permanent Marker'; color: var(--pink); text-transform: none; font-size: 30px; }
+  #C .fine ol { columns: 2; column-gap: 40px; padding-left: 26px; font-size: 17px; }
+  #C .fine li { break-inside: avoid; margin-bottom: 12px; }
+  #C .fine b { background: #ffe600; font-weight: 400; }
+  #C .sig { grid-column: 1 / 13; text-align: center; font-family: 'Permanent Marker'; font-size: 30px; margin-top: 40px; transform: rotate(-1deg); }
+
+  /* ===================================== D · CHOMP (toy) ===================================== */
+  #D { --bg:#ffefd9; --org:#ff5a36; --mint:#3ddc97; --grape:#6c4cf5; --ink:#1d1340; --sun:#ffc93c;
+       background: var(--bg); color: var(--ink); font-family: 'Bricolage Grotesque', sans-serif; font-size: 19px; line-height: 1.5; overflow: hidden; user-select: none; }
+  #D .wrap { max-width: 1200px; margin: 0 auto; padding: 26px 32px 140px; }
+  #D nav { display: flex; justify-content: space-between; align-items: center; }
+  #D .logo { font-family: 'Bagel Fat One'; font-size: 34px; color: var(--org); }
+  #D .pill { background: #fff; border: 3px solid var(--ink); border-radius: 999px; padding: 10px 18px; font-weight: 700; box-shadow: 0 4px 0 var(--ink); display: inline-flex; align-items: center; gap: 10px; font-size: 16px; }
+  #D .pill code { font-family: 'IBM Plex Mono'; font-size: 14px; }
+  #D .pill button { background: var(--ink); color: #fff; border: 0; border-radius: 999px; padding: 6px 14px; font-weight: 700; font-size: 14px; }
+  #D .stage { display: grid; grid-template-columns: 1fr 460px 1fr; align-items: center; margin-top: 18px; min-height: 620px; position: relative; }
+  #D .copy h1 { font-family: 'Bagel Fat One'; font-size: 92px; line-height: .92; color: var(--ink); }
+  #D .copy h1 em { font-style: normal; color: var(--org); }
+  #D .copy p { font-size: 22px; margin-top: 16px; max-width: 340px; }
+  #D .copy .arrow { font-family: 'Bagel Fat One'; color: var(--grape); font-size: 24px; margin-top: 18px; transform: rotate(-4deg); display: inline-block; }
+  #D .canbox { position: relative; display: grid; place-items: center; }
+  #D .canbox svg { width: 400px; height: auto; overflow: visible; }
+  #D #d-lid { transform-origin: 60px 150px; transition: transform .25s cubic-bezier(.5,1.8,.5,1); transform-box: view-box; }
+  #D .canbox.open #d-lid { transform: rotate(-28deg) translate(-6px,-26px); }
+  #D .canbox.chomp svg { animation: d-chomp .5s ease; }
+  @keyframes d-chomp { 30% { transform: scale(1.08, .9); } 60% { transform: scale(.95, 1.06); } }
+  #D .bubble { position: absolute; top: 10px; right: -20px; background: #fff; border: 3px solid var(--ink); border-radius: 22px; padding: 10px 18px; font-family: 'Bagel Fat One'; font-size: 26px; box-shadow: 0 4px 0 var(--ink); opacity: 0; transform: scale(.6) rotate(6deg); transition: .2s; }
+  #D .bubble.show { opacity: 1; transform: scale(1) rotate(6deg); }
+  #D .count { position: absolute; bottom: -6px; background: var(--ink); color: #fff; border-radius: 999px; padding: 8px 20px; font-weight: 700; font-size: 17px; }
+  #D .count b { color: var(--sun); }
+  #D .tray { display: flex; flex-direction: column; gap: 18px; align-items: flex-end; }
+  #D .tray .hint { font-weight: 700; font-size: 16px; opacity: .7; }
+  #D .chip { display: flex; align-items: center; gap: 14px; background: #fff; border: 3px solid var(--ink); border-radius: 22px; padding: 12px 20px 12px 12px; box-shadow: 0 6px 0 var(--ink); cursor: grab; touch-action: none; font-weight: 700; font-size: 20px; transition: transform .15s; }
+  #D .chip:hover { transform: translateY(-3px) rotate(-2deg); }
+  #D .chip .ic { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; font-family: 'Bagel Fat One'; color: #fff; font-size: 20px; border: 3px solid var(--ink); }
+  #D .chip small { display: block; font-size: 14px; font-weight: 500; opacity: .7; }
+  #D .chip.ghost { position: fixed; z-index: 9000; pointer-events: none; transform: rotate(-6deg) scale(1.05); cursor: grabbing; }
+  #D .chip.eaten { transition: transform .35s ease-in, opacity .35s; opacity: 0; }
+  #D .ticker { margin-top: 40px; border-top: 3px solid var(--ink); border-bottom: 3px solid var(--ink); background: var(--sun); overflow: hidden; white-space: nowrap; padding: 14px 0; font-weight: 700; font-size: 18px; }
+  #D .ticker .track { display: inline-block; animation: d-tick 40s linear infinite; }
+  #D .ticker span { margin-right: 46px; }
+  #D .ticker span::before { content: "🔥 "; }
+  @keyframes d-tick { to { transform: translateX(-50%); } }
+  #D h2 { font-family: 'Bagel Fat One'; font-size: 60px; margin: 70px 0 24px; text-align: center; }
+  #D .faq { max-width: 820px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+  #D details { background: #fff; border: 3px solid var(--ink); border-radius: 24px; box-shadow: 0 5px 0 var(--ink); padding: 0 26px; }
+  #D details[open] { background: #fff8ec; }
+  #D summary { list-style: none; cursor: pointer; padding: 20px 0; font-weight: 800; font-size: 23px; display: flex; justify-content: space-between; gap: 16px; }
+  #D summary::after { content: "+"; font-family: 'Bagel Fat One'; font-size: 30px; line-height: .8; color: var(--org); }
+  #D details[open] summary::after { content: "–"; }
+  #D details p { padding: 0 0 22px; font-size: 19px; }
+  #D details code { font-family: 'IBM Plex Mono'; font-size: 16px; background: #f1e6d6; padding: 1px 6px; border-radius: 6px; }
+  #D .big-no { font-family: 'Bagel Fat One'; font-size: 44px; color: var(--org); display: block; line-height: 1; margin-bottom: 6px; }
+  #D footer { text-align: center; margin-top: 70px; font-weight: 700; opacity: .75; }
+</style>
+</head>
+<body>
+
+<!-- ============================================ A ============================================ -->
+<div class="variant" id="A" data-name="Neon Incinerator">
+  <div class="glow m"></div><div class="glow c"></div><div class="grid-floor"></div>
+  <div class="wrap">
+    <div class="hud">
+      <div><b>7R45HC4N</b> // SINK.NODE // <span class="mono">v0.8.36-paris</span></div>
+      <div class="lights"><span><i></i>OWNER: NULL</span><span><i></i>WITHDRAW: NONE</span><span><i></i>UPGRADE: NEVER</span></div>
+    </div>
+    <div class="hero">
+      <div class="kicker">&gt;&gt; PERMANENT · OWNERLESS · IRREVERSIBLE</div>
+      <h1 data-t="7R45HC4N">7R45HC4N</h1>
+      <p class="sub">An on-chain incinerator for ETH, ERC20, ERC721 &amp; ERC1155. Whatever goes in <em>never comes out</em>. It still logs an event for every burn, so you get a receipt.</p>
+    </div>
+    <div class="cols">
+      <div class="panel">
+        <h3>KILL FEED <small id="a-count">LIVE · STUB</small></h3>
+        <div class="feed" id="a-feed"></div>
+      </div>
+      <div class="panel">
+        <h3>INCINERATOR <small>CHAMBER 01</small></h3>
+        <div class="reactor"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="core" id="a-core"></div></div>
+        <div class="tabs" id="a-tabs">
+          <button class="on" data-k="ETH">ETH</button><button data-k="ERC20">ERC20</button><button data-k="ERC721">ERC721</button><button data-k="ERC1155">1155</button>
+        </div>
+        <div class="console">
+          <label id="a-l1">AMOUNT (ETH)</label><input id="a-i1" value="0.1">
+          <button class="go" id="a-go">INCINERATE</button>
+          <div class="hint" id="a-hint">→ calls <span style="color:var(--cyan)">burn()</span> with value. Emits ETHDeposited. No undo.</div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>SYSTEM WARNINGS <small>07</small></h3>
+        <ul class="sys">
+          <li>Plain <span style="color:var(--cyan)">transfer()</span> still destroys tokens. It just leaves no TrashCan event.</li>
+          <li>ERC721/1155 hooks are public. Deposit events can be forged; check the token's own Transfer event.</li>
+          <li>ERC20Deposited is forgeable via a fake <span style="color:var(--cyan)">balanceOf</span>. It doesn't prove anything was burned.</li>
+          <li>Fee-on-transfer tokens: the event logs the amount received, not the amount sent.</li>
+          <li>ERC777 tokens with enforced hooks revert. No ERC-1820 registration.</li>
+          <li>Blocklisting tokens (USDC-style) can lock TrashCan out of <span style="color:var(--cyan)">burnERC20</span> forever.</li>
+          <li>SELFDESTRUCT-forced ETH arrives silently. Balance ≥ Σ events.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="addr">
+      <span class="lab">TARGET</span><code class="js-addr"></code><button class="js-copy">COPY</button>
+    </div>
+    <div class="stats">
+      <div><b>100+</b><span>CHAINS · SAME ADDRESS</span></div>
+      <div><b>3,786</b><span>BYTES RUNTIME</span></div>
+      <div><b>0</b><span>ADMIN KEYS</span></div>
+      <div><b>∞</b><span>RETENTION</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ B ============================================ -->
+<div class="variant" id="B" data-name="Public Waste Facility">
+  <div class="stripes"></div>
+  <div class="wrap">
+    <header><span>Decentralized Sanitation Dept.</span><span class="badge">Facility № 7r45hc4n</span></header>
+    <div class="hero">
+      <div class="no">EVM DROP-OFF POINT</div>
+      <h1>No<br>Retrieval.</h1>
+      <div class="hero-row">
+        <p>A permanent public disposal site for ETH, ERC20, ERC721 and ERC1155. Drop it here and it's gone. Every drop through the proper chute gets a receipt in the event log.</p>
+        <div class="hours">
+          <div><span>Open</span><span>24 / 7 / ∞</span></div>
+          <div><span>Locations</span><span>100+ chains</span></div>
+          <div><span>Attendant</span><span>None</span></div>
+          <div><span>Lost &amp; Found</span><span>Does not exist</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="addrbar"><span class="l">Site address →</span><code class="js-addr"></code><button class="js-copy">Copy address</button></div>
+  <div class="wrap">
+    <section>
+      <h2><span class="n">01</span> Accepted materials</h2>
+      <div class="mats" id="b-mats">
+        <div class="mat on" data-k="ETH"><div class="pict">Ξ</div><h4>Ether</h4><p>Send to the address, or call burn() for a guaranteed receipt.</p><code>burn{value: x}()</code></div>
+        <div class="mat" data-k="ERC20"><div class="pict">20</div><h4>Fungible tokens</h4><p>Approve first, then hand it over through the chute.</p><code>burnERC20(token, amt)</code></div>
+        <div class="mat" data-k="ERC721"><div class="pict">721</div><h4>NFTs</h4><p>Use safeTransferFrom. A plain transferFrom burns it too, but you get no receipt.</p><code>safeTransferFrom(→ can)</code></div>
+        <div class="mat" data-k="ERC1155"><div class="pict">1155</div><h4>Multi-tokens</h4><p>Single or batch. Batch receipts don't list the IDs.</p><code>safeBatchTransferFrom</code></div>
+      </div>
+      <div class="dispose">
+        <div class="form">
+          <label id="b-l1">Quantity of Ether to dispose</label>
+          <input id="b-i1" value="0.25">
+          <button id="b-go">Dispose permanently</button>
+          <div class="warn"><span class="tri"></span>Materials deposited at this facility cannot be retrieved by you, by staff, or by anyone. There is no staff.</div>
+        </div>
+        <div class="ticket" id="b-ticket"></div>
+      </div>
+    </section>
+    <section>
+      <h2><span class="n">02</span> Facility regulations</h2>
+      <div class="rules">
+        <div class="rule"><div class="s">§1</div><div><h4>Receipts only via the chute</h4><p>A plain token transfer() or NFT transferFrom destroys the item without a TrashCan event.</p></div></div>
+        <div class="rule"><div class="s">§2</div><div><h4>Receipts are not proof</h4><p>Receiver hooks are public and ERC20Deposited can be forged. Check the token's own Transfer event.</p></div></div>
+        <div class="rule"><div class="s">§3</div><div><h4>Weighed on arrival</h4><p>Fee-on-transfer tokens are logged at the amount actually received.</p></div></div>
+        <div class="rule"><div class="s">§4</div><div><h4>ERC777 refused</h4><p>Not registered with ERC-1820. Tokens that enforce hooks will revert.</p></div></div>
+        <div class="rule"><div class="s">§5</div><div><h4>Blocklisted sites</h4><p>A token issuer can ban this address. Nobody can appeal, ever.</p></div></div>
+        <div class="rule"><div class="s">§6</div><div><h4>Nested drops refused</h4><p>Reentrant burnERC20 calls revert so nothing gets counted twice.</p></div></div>
+        <div class="rule"><div class="s">§7</div><div><h4>Forced deliveries</h4><p>ETH forced in via SELFDESTRUCT lands without paperwork.</p></div></div>
+        <div class="rule"><div class="s">§8</div><div><h4>Blast gas rebates</h4><p>They pile up here and can never be claimed.</p></div></div>
+      </div>
+    </section>
+    <footer><span>Operated by: nobody.</span><span>Same address on every chain · CREATE2</span></footer>
+  </div>
+</div>
+
+<!-- ============================================ C ============================================ -->
+<div class="variant" id="C" data-name="Xerox Zine">
+  <div class="dot p"></div><div class="dot b"></div>
+  <div class="wrap">
+    <div style="font-size:16px">issue #∞ · free · photocopy &amp; distribute</div>
+    <div class="ransom"><span>7</span><span>r</span><span>4</span><span>5</span><span>h</span><span>c</span><span>4</span><span>n</span></div>
+    <p class="tagline">a bin on the blockchain. <mark>stuff goes in. nothing comes out.</mark> ever.</p>
+    <div class="sticker s1">100%<br>owner-<br>less</div>
+    <div class="sticker s2">no refunds</div>
+
+    <div class="board">
+      <div class="scrap torn why">
+        <div class="tape" style="top:-12px;left:40%;transform:rotate(-4deg)"></div>
+        <h2 class="riso">why not just use 0x…dEaD?</h2>
+        <ul>
+          <li>dead addresses log nothing. good luck tracking burns.</li>
+          <li>NFTs sent with safeTransferFrom bounce right off.</li>
+          <li class="ok">this bin logs an event for every proper burn.</li>
+          <li class="ok">eats ETH, ERC20, ERC721 &amp; ERC1155.</li>
+          <li class="ok">no owner. no keys. no off switch. no upgrades.</li>
+        </ul>
+      </div>
+      <div class="scrap feed">
+        <div class="tape" style="top:-14px;right:30px;transform:rotate(6deg)"></div>
+        <h2>recently trashed</h2>
+        <div id="c-feed"></div>
+      </div>
+
+      <div class="how">
+        <div class="step"><div class="n">1</div><h3>ETH</h3>just send it. or call burn() if you want a receipt even for zero.<code>burn{value: x}()</code></div>
+        <div class="step"><div class="n">2</div><h3>ERC20</h3>approve the bin, then make it pull the tokens.<code>approve(can, amt)<br>burnERC20(token, amt)</code></div>
+        <div class="step"><div class="n">3</div><h3>NFTs</h3>use the safe transfer. a plain transferFrom burns it too, but you get no receipt.<code>safeTransferFrom(you, can, id)</code></div>
+        <div class="step"><div class="n">4</div><h3>ERC1155</h3>single or batch, both work. batch receipts don't list the ids.<code>safeBatchTransferFrom(…)</code></div>
+      </div>
+
+      <div class="coupon">
+        <h2>cut here &amp; trash</h2>
+        <div class="row">
+          <input id="c-i1" value="0.05">
+          <select id="c-k"><option>ETH</option><option>ERC20</option><option>ERC721</option><option>ERC1155</option></select>
+          <button id="c-go">trash it</button>
+        </div>
+        <small>(prototype: nothing gets sent. the real one does not mess around.)</small>
+      </div>
+      <div class="addr">
+        <div class="lbl">the bin lives at →</div>
+        <code class="js-addr"></code>
+        <button class="js-copy">copy</button>
+        <div style="margin-top:10px;font-size:16px">same address on 100+ chains. CREATE2, baby.</div>
+      </div>
+
+      <div class="fine">
+        <h2>the small print <span>(read it. seriously.)</span></h2>
+        <ol>
+          <li>plain <b>transfer()</b> / transferFrom still destroys your stuff. you just get no TrashCan event.</li>
+          <li>the NFT hooks are public and <b>ERC20Deposited can be faked</b> with a bogus balanceOf. check the token's own Transfer event.</li>
+          <li>fee-on-transfer tokens: the event shows <b>what arrived</b>, not what you sent.</li>
+          <li><b>ERC777</b> tokens that enforce hooks will revert. no ERC-1820 registration.</li>
+          <li>USDC-style tokens can <b>blocklist the bin</b>. nobody can appeal, forever.</li>
+          <li>ETH forced in via <b>SELFDESTRUCT</b> arrives silently.</li>
+          <li>nested burnERC20 calls revert, so nothing gets counted twice.</li>
+          <li>on Blast, gas rebates pile up here and stay unclaimed forever.</li>
+        </ol>
+      </div>
+      <div class="sig">made by nobody. owned by nobody. ☠</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ D ============================================ -->
+<div class="variant" id="D" data-name="Chomp (toy)">
+  <div class="wrap">
+    <nav><span class="logo">7r45hc4n</span><span class="pill"><code class="js-addr"></code><button class="js-copy">copy</button></span></nav>
+    <div class="stage">
+      <div class="copy">
+        <h1>Feed<br>the <em>can.</em></h1>
+        <p>It eats ETH, tokens and NFTs. It never gives anything back. Not even to us.</p>
+        <span class="arrow">drag a snack in →</span>
+      </div>
+      <div class="canbox" id="d-can">
+        <div class="bubble" id="d-bubble">nom!</div>
+        <svg viewBox="0 0 400 470">
+          <ellipse cx="200" cy="172" rx="128" ry="16" fill="#1d1340"/>
+          <path d="M72 172 L328 172 L304 430 Q302 448 284 448 L116 448 Q98 448 96 430 Z" fill="#3ddc97" stroke="#1d1340" stroke-width="7" stroke-linejoin="round"/>
+          <g stroke="#1d1340" stroke-opacity=".22" stroke-width="10" stroke-linecap="round"><line x1="130" y1="370" x2="134" y2="420"/><line x1="270" y1="370" x2="266" y2="420"/><line x1="200" y1="385" x2="200" y2="425"/></g>
+          <ellipse cx="128" cy="300" rx="20" ry="11" fill="#ff8fb1" opacity=".8"/><ellipse cx="272" cy="300" rx="20" ry="11" fill="#ff8fb1" opacity=".8"/>
+          <circle cx="158" cy="255" r="30" fill="#fff" stroke="#1d1340" stroke-width="6"/><circle cx="242" cy="255" r="30" fill="#fff" stroke="#1d1340" stroke-width="6"/>
+          <circle id="d-p1" cx="158" cy="258" r="13" fill="#1d1340"/><circle id="d-p2" cx="242" cy="258" r="13" fill="#1d1340"/>
+          <path id="d-mouth" d="M168 318 Q200 348 232 318" fill="none" stroke="#1d1340" stroke-width="7" stroke-linecap="round"/>
+          <g id="d-lid">
+            <rect x="166" y="96" width="68" height="36" rx="14" fill="none" stroke="#1d1340" stroke-width="9"/>
+            <rect x="40" y="124" width="320" height="44" rx="18" fill="#ff5a36" stroke="#1d1340" stroke-width="7"/>
+          </g>
+        </svg>
+        <div class="count">snacks eaten: <b id="d-count">1,337</b></div>
+      </div>
+      <div class="tray" id="d-tray">
+        <span class="hint">drag (or tap) to feed</span>
+        <div class="chip" data-k="ETH" data-v="0.1"><span class="ic" style="background:#ff5a36">Ξ</span><span>0.1 ETH<small>burn()</small></span></div>
+        <div class="chip" data-k="ERC20" data-v="1,000"><span class="ic" style="background:#6c4cf5">20</span><span>1,000 $RUG<small>burnERC20</small></span></div>
+        <div class="chip" data-k="ERC721" data-v="4412"><span class="ic" style="background:#3ddc97">721</span><span>Goblin #4412<small>safeTransferFrom</small></span></div>
+        <div class="chip" data-k="ERC1155" data-v="12"><span class="ic" style="background:#ffc93c;font-size:15px">1155</span><span>12 × Ticket<small>safeTransferFrom</small></span></div>
+      </div>
+    </div>
+
+    <div class="ticker"><div class="track" id="d-ticker"></div></div>
+
+    <h2>Questions people ask</h2>
+    <div class="faq">
+      <details open><summary>Can I get it back?</summary><p><span class="big-no">Nope.</span>Nobody can. There's no owner, no withdraw function and no upgrade path. Once it's deployed, that's it.</p></details>
+      <details><summary>Why not just send stuff to 0x…dEaD?</summary><p>A dead address has no code. It logs nothing, and NFTs sent with <code>safeTransferFrom</code> bounce right off it. The can accepts every standard and logs an event for each proper burn.</p></details>
+      <details><summary>How do I feed it ERC20 tokens?</summary><p>Approve it, then call <code>burnERC20(token, amount)</code>. It pulls the tokens and logs how many actually arrived.</p></details>
+      <details><summary>I used transfer() and there's no event?</summary><p>Your tokens are still gone. A plain <code>transfer()</code> or NFT <code>transferFrom</code> just doesn't tell the can, so there's no receipt.</p></details>
+      <details><summary>Can I trust the burn events?</summary><p>Not blindly. The NFT hooks are public, and <code>ERC20Deposited</code> can be faked with a bogus <code>balanceOf</code>. Cross-check the token's own Transfer event.</p></details>
+      <details><summary>Why does the event show less than I sent?</summary><p>Fee-on-transfer tokens take a cut on the way in. The can logs what actually arrived.</p></details>
+      <details><summary>Some tokens won't go in. Why?</summary><p>ERC777 tokens that enforce hooks revert, since the can isn't registered with ERC-1820. USDC-style tokens can also blocklist the can, and nobody can appeal that.</p></details>
+      <details><summary>Is it the same address on every chain?</summary><p>Yes. It's deployed through the canonical CREATE2 factory, so it lives at the same address on 100+ chains.</p></details>
+    </div>
+    <footer>3,786 bytes · no owner · no undo · MIT</footer>
+  </div>
+</div>
+<!-- ======================================= SWITCHER ======================================= -->
+<div id="proto-bar"><button id="pv" aria-label="previous">←</button><span class="lbl"><span class="tag">PROTOTYPE</span><span id="plbl"></span></span><button id="pn" aria-label="next">→</button></div>
+
+<script>
+/* ---------- real contract data (from README) ---------- */
+const ADDRESS = '0xF43ba7c5CdD8391732919115E8E16Ea485b23a78';
+const short = a => a.slice(0, 6) + '…' + a.slice(-4);
+
+/* ---------- STUB burn feed. Fake data; no chain access. ---------- */
+const randAddr = () => '0x' + [...Array(40)].map(() => '0123456789abcdef'[Math.random() * 16 | 0]).join('');
+let FEED = [
+  { k: 'ETH',     what: '0.42 ETH',              from: randAddr(), ago: '12s' },
+  { k: 'ERC20',   what: '1,000,000 $RUG',        from: randAddr(), ago: '48s' },
+  { k: 'ERC721',  what: 'Pixel Goblin #4412',    from: randAddr(), ago: '2m'  },
+  { k: 'ERC1155', what: '12 × Cursed Ticket #7',  from: randAddr(), ago: '5m'  },
+  { k: 'ERC20',   what: '69,420 $GRIFT',         from: randAddr(), ago: '9m'  },
+  { k: 'ETH',     what: '0.0 ETH (burn() ping)', from: randAddr(), ago: '14m' },
+  { k: 'ERC721',  what: 'Mfer-ish Ape #91',      from: randAddr(), ago: '31m' },
+  { k: 'ERC20',   what: '3.5 WETH',              from: randAddr(), ago: '1h'  },
+  { k: 'ERC1155', what: 'batch · 4 ids',         from: randAddr(), ago: '2h'  },
+  { k: 'ETH',     what: '1.337 ETH',             from: randAddr(), ago: '3h'  },
+];
+const EVENT = { ETH: 'ETHDeposited', ERC20: 'ERC20Deposited', ERC721: 'ERC721Deposited', ERC1155: 'ERC1155SingleDeposited' };
+const UNIT  = { ETH: v => v + ' ETH', ERC20: v => v + ' $TOKEN', ERC721: v => 'NFT #' + v, ERC1155: v => v + ' × Item #1' };
+function stubBurn(k, v) {
+  const e = { k, what: UNIT[k](v || '0'), from: randAddr(), ago: 'now', fresh: true };
+  FEED = [e, ...FEED.map(x => ({ ...x, fresh: false }))].slice(0, 14);
+  render();
+}
+
+/* ---------- per-variant renderers ---------- */
+const $ = id => document.getElementById(id);
+const tag = { ETH: 'ETH', ERC20: 'ERC20', ERC721: 'NFT', ERC1155: '1155' };
+function render() {
+  // A
+  $('a-feed').innerHTML = FEED.map(e => `<div class="${e.fresh ? 'fresh' : ''}"><span class="k">[${tag[e.k]}]</span><span>${e.what}<br><span class="t">${short(e.from)}</span></span><span class="t">${e.ago}</span></div>`).join('');
+  // B
+  $('b-ticket').innerHTML = `<h5>Disposal log</h5>` + FEED.slice(0, 7).map((e, i) =>
+    `<div class="row ${e.fresh ? 'fresh' : ''}"><span>#${String(9000 - i).padStart(5, '0')} ${tag[e.k]}</span><span>${e.ago}</span></div><div class="${e.fresh ? 'fresh' : ''}">&nbsp;&nbsp;${e.what}</div>`).join('') +
+    `<div style="border-top:2px dashed #000;margin-top:10px;padding-top:8px;text-align:center">RETRIEVAL: NOT POSSIBLE</div>`;
+  // C
+  $('c-feed').innerHTML = FEED.slice(0, 8).map(e =>
+    `<div class="row ${e.fresh ? 'fresh' : ''}"><s>${e.what}</s><span class="t">${e.ago}</span></div>`).join('');
+  // D
+  const items = FEED.map(e => `<span>${e.what} · ${short(e.from)} · ${e.ago}</span>`).join('');
+  $('d-ticker').innerHTML = items + items; // doubled for a seamless loop
+}
+
+/* A: tabs + console */
+const A_CFG = {
+  ETH:     ['AMOUNT (ETH)', '0.1', '→ calls <span style="color:var(--cyan)">burn()</span> with value. Emits ETHDeposited. No undo.'],
+  ERC20:   ['TOKEN AMOUNT', '1000', '→ approve() then <span style="color:var(--cyan)">burnERC20(token, amount)</span>. Logs the received delta.'],
+  ERC721:  ['TOKEN ID', '4412', '→ <span style="color:var(--cyan)">safeTransferFrom</span>(you, can, id). Plain transferFrom burns too, but leaves no event.'],
+  ERC1155: ['QUANTITY', '12', '→ <span style="color:var(--cyan)">safeTransferFrom</span>(you, can, id, qty, ""). Batch also supported.'],
+};
+let aKind = 'ETH';
+$('a-tabs').onclick = ev => {
+  const b = ev.target.closest('button'); if (!b) return;
+  aKind = b.dataset.k;
+  [...$('a-tabs').children].forEach(x => x.classList.toggle('on', x === b));
+  const [l, v, h] = A_CFG[aKind]; $('a-l1').textContent = l; $('a-i1').value = v; $('a-hint').innerHTML = h;
+};
+$('a-go').onclick = () => { const c = $('a-core'); c.classList.remove('hot'); void c.offsetWidth; c.classList.add('hot'); stubBurn(aKind, $('a-i1').value); };
+
+/* B: material tiles drive the form */
+const B_LBL = { ETH: 'Quantity of Ether to dispose', ERC20: 'Quantity of tokens to dispose', ERC721: 'NFT token ID to dispose', ERC1155: 'Quantity of multi-tokens to dispose' };
+let bKind = 'ETH';
+$('b-mats').onclick = ev => {
+  const m = ev.target.closest('.mat'); if (!m) return;
+  bKind = m.dataset.k; [...$('b-mats').children].forEach(x => x.classList.toggle('on', x === m)); $('b-l1').textContent = B_LBL[bKind];
+};
+$('b-go').onclick = () => stubBurn(bKind, $('b-i1').value);
+
+/* C */
+$('c-go').onclick = () => stubBurn($('c-k').value, $('c-i1').value);
+
+/* D: drag a chip into the can (tap also works) */
+const can = $('d-can'), svg = can.querySelector('svg');
+const BUBBLES = ['nom!', 'gone!', 'yum.', 'no refunds!', 'delicious', 'more?'];
+let eaten = 1337;
+function feed(chip) {
+  can.classList.add('open');
+  setTimeout(() => {
+    can.classList.remove('open', 'chomp'); void can.offsetWidth; can.classList.add('chomp');
+    const b = $('d-bubble'); b.textContent = BUBBLES[Math.random() * BUBBLES.length | 0]; b.classList.add('show');
+    clearTimeout(feed.t); feed.t = setTimeout(() => b.classList.remove('show'), 1100);
+    $('d-count').textContent = (++eaten).toLocaleString('en-US');
+    stubBurn(chip.dataset.k, chip.dataset.v);
+  }, 250);
+}
+const overCan = (x, y) => { const r = svg.getBoundingClientRect(); return x > r.left && x < r.right && y > r.top && y < r.bottom; };
+$('d-tray').addEventListener('pointerdown', ev => {
+  const chip = ev.target.closest('.chip'); if (!chip) return;
+  ev.preventDefault();
+  const r = chip.getBoundingClientRect(), dx = ev.clientX - r.left, dy = ev.clientY - r.top, x0 = ev.clientX, y0 = ev.clientY;
+  const g = chip.cloneNode(true); g.classList.add('ghost'); g.style.width = r.width + 'px'; g.style.left = r.left + 'px'; g.style.top = r.top + 'px';
+  document.body.appendChild(g); chip.style.opacity = .35;
+  const move = e => { g.style.left = e.clientX - dx + 'px'; g.style.top = e.clientY - dy + 'px'; can.classList.toggle('open', overCan(e.clientX, e.clientY)); };
+  const up = e => {
+    removeEventListener('pointermove', move); removeEventListener('pointerup', up);
+    chip.style.opacity = '';
+    const tap = Math.hypot(e.clientX - x0, e.clientY - y0) < 6;
+    if (tap || overCan(e.clientX, e.clientY)) {
+      const s = svg.getBoundingClientRect();
+      g.classList.add('eaten'); g.style.left = s.left + s.width / 2 - r.width / 2 + 'px'; g.style.top = s.top + s.height * .3 + 'px'; g.style.transform = 'scale(.2) rotate(40deg)';
+      setTimeout(() => g.remove(), 380); feed(chip);
+    } else { g.remove(); can.classList.remove('open'); }
+  };
+  addEventListener('pointermove', move); addEventListener('pointerup', up);
+});
+/* pupils follow the cursor */
+addEventListener('pointermove', e => {
+  if (!$('D').classList.contains('on')) return;
+  const r = svg.getBoundingClientRect(), k = r.width / 400;
+  [['d-p1', 158], ['d-p2', 242]].forEach(([id, cx]) => {
+    const ex = r.left + cx * k, ey = r.top + 255 * k, a = Math.atan2(e.clientY - ey, e.clientX - ex);
+    const d = Math.min(11, Math.hypot(e.clientX - ex, e.clientY - ey) / 20);
+    $(id).setAttribute('cx', cx + Math.cos(a) * d); $(id).setAttribute('cy', 255 + Math.sin(a) * d);
+  });
+});
+
+/* shared address + copy */
+document.querySelectorAll('.js-addr').forEach(n => n.textContent = ADDRESS);
+document.querySelectorAll('.js-copy').forEach(b => b.onclick = async () => {
+  const t = b.textContent; try { await navigator.clipboard.writeText(ADDRESS); b.textContent = '✓ copied'; } catch { b.textContent = 'copy blocked'; }
+  setTimeout(() => b.textContent = t, 1200);
+});
+
+/* ---------- PROTOTYPE SWITCHER ---------- */
+const VARIANTS = [...document.querySelectorAll('.variant')].map(v => v.id);
+function show(v) {
+  if (!VARIANTS.includes(v)) v = VARIANTS[0];
+  document.querySelectorAll('.variant').forEach(n => n.classList.toggle('on', n.id === v));
+  $('plbl').textContent = `${v} (${$(v).dataset.name})  ·  ${VARIANTS.indexOf(v) + 1}/${VARIANTS.length}`;
+  const u = new URL(location.href); u.searchParams.set('variant', v); history.replaceState(null, '', u);
+  window.scrollTo(0, 0);
+}
+const cur = () => new URL(location.href).searchParams.get('variant') || VARIANTS[0];
+const step = d => show(VARIANTS[(VARIANTS.indexOf(cur()) + d + VARIANTS.length) % VARIANTS.length]);
+$('pv').onclick = () => step(-1); $('pn').onclick = () => step(1);
+addEventListener('keydown', e => {
+  if (e.target.closest('input, textarea, select, [contenteditable]')) return;
+  if (e.key === 'ArrowLeft') step(-1); if (e.key === 'ArrowRight') step(1);
+});
+render(); show(cur());
+</script>
+</body>
+</html>
